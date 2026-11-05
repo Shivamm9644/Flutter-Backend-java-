@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DashCam Enterprise Admin - JT808/JT1078 Fleet Sync</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/style.css?v=2">
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script src="/vendor/hls/hls.min.js"></script>
+</head>
+
+<body>
+    <!-- Global Accident Alert Popup -->
+    <div id="accidentAlert" class="accident-alert hidden">
+        <div class="alert-content">
+            <div class="alert-header">⚠️ CRITICAL ACCIDENT DETECTED ⚠️</div>
+            <div class="alert-details">
+                <p><strong>Terminal ID:</strong> <span id="alertTerminal">...</span></p>
+                <p><strong>Vehicle ID:</strong> <span id="alertVehicle">...</span></p>
+                <p><strong>Speed:</strong> <span id="alertSpeed">...</span> km/h</p>
+                <p><strong>Alarm Type:</strong> <span id="alertAlarmType">...</span></p>
+                <p><strong>Impact:</strong> <span id="alertGForce">N/A</span> G</p>
+            </div>
+            <div class="alert-actions">
+                <button id="btnAckAlert" class="btn-primary">Acknowledge</button>
+                <button id="btnViewAccident" class="btn-danger">View Evidence</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <span class="icon">📷</span>
+                <h2>DashCam Admin</h2>
+                <p style="color: var(--text-secondary); font-size: 13px; margin-top: 6px;">JT808/JT1078 Ingestion &
+                    Fleet Sync</p>
+            </div>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" value="admin" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" value="password" required>
+                </div>
+                <div id="loginError" style="color: var(--danger); font-size: 12px; margin-bottom: 12px; display: none;">
+                    Invalid credentials</div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="dashboardScreen" class="app-container" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="icon">📷</span> DashCam Pro
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#vehicles" class="nav-item active" data-target="vehicles-section">
+                    <span class="nav-icon">🚗</span> Vehicles
+                </a>
+                <a href="#dashboard" class="nav-item" data-target="dashboard-section" id="nav-dashboard">
+                    <span class="nav-icon">📊</span> Live Monitor
+                </a>
+                <a href="#reels" class="nav-item" data-target="reels-section" id="nav-reels">
+                    <span class="nav-icon">📱</span> Reels & History
+                </a>
+                <a href="#console" class="nav-item" data-target="console-section" id="nav-console">
+                    <span class="nav-icon">💻</span> Simulation Console
+                </a>
+                <a href="#trips" class="nav-item" data-target="trips-section" id="nav-trips">
+                    <span class="nav-icon">🗺️</span> Trip History
+                </a>
+                <a href="#archive" class="nav-item" data-target="archive-section" id="nav-archive">
+                    <span class="nav-icon">📹</span> Incident Archive
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="btnTriggerAccident" class="btn-danger"
+                    style="width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold;">Simulate
+                    Incident</button>
+                <button id="logoutBtn" class="btn-logout">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <div class="main-wrapper">
+            <header class="top-header">
+                <div class="header-search">
+                    <input type="text" placeholder="Search terminal, trip or incident...">
+                </div>
+                <div class="header-actions">
+                    <div id="simulatedBadgeHeader" class="badge-simulated" style="display: none;">
+                        <span>⚠️ SIMULATED DATA</span>
+                    </div>
+                    <div class="status-badge">
+                        <div class="indicator online"></div>
+                        <span>System Online</span>
+                    </div>
+                    <div class="user-profile">
+                        <div class="avatar">A</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 1. Vehicles Fleet Section -->
+            <main id="vehicles-section" class="content-section active">
+                <div class="page-title">
+                    <h1>Vehicle Fleet</h1>
+                    <p>Select a terminal to view real-time telemetry and video feeds</p>
+                </div>
+                <div class="vehicles-grid" id="vehiclesGrid">
+                    <p style="color: var(--text-secondary); grid-column: 1 / -1;">Waiting for dashcams to connect or
+                        simulation to start...</p>
+                </div>
+            </main>
+
+            <!-- 2. Live Monitor Section -->
+            <main id="dashboard-section" class="content-section">
+                <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 id="dashboardTitle">Live Monitoring</h1>
+                        <p>Real-time telemetry and video stream for selected terminal</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <span id="liveSimBadge" class="badge-simulated" style="display: none;">SIMULATED</span>
+                        <button id="backToFleetBtn" class="btn-logout" style="width: auto; padding: 8px 16px;">← Back to
+                            Fleet</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <section class="panel camera-feed">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h2>Primary Video Stream (JT/T 1078)</h2>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span id="streamStatusBadge" class="badge"
+                                    style="background: #3b82f6;">Connecting</span>
+                                <button id="btnToggleAudio" class="btn-ctrl"
+                                    style="background: rgba(255,255,255,0.1); color: white; padding: 4px 10px; font-size: 12px;">🔊
+                                    Unmute Audio</button>
+                            </div>
+                        </div>
+                        <div class="video-container"
+                            style="position: relative; background: #000; border-radius: 8px; overflow: hidden;">
+                            <video id="liveVideo" controls autoplay playsinline muted
+                                style="width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000;"></video><img
+                                id="liveFrameImg"
+                                style="width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000; display: none;" />
+                            <div class="video-overlay" id="videoOverlay">
+                                <div>LIVE - <span id="videoTerminalId">Waiting...</span> (CH 1)</div>
+                                <div style="font-size: 11px; opacity: 0.8;" id="videoLatencyOverlay">Delay:
+                                    calculating...</div>
+                            </div>
+                        </div>
+                        <div
+                            style="margin-top: 14px; font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                            <span>Media Presentation Time: <strong id="val-media-pts">--:--:--</strong></span>
+                            <span>Target Segment: <strong>3.00s Closed GOP</strong></span>
+                        </div>
+                    </section>
+
+                    <section class="panel telemetry-data">
+                        <div class="panel-header">
+                            <h2>Telemetry (JT/T 808 Synced)</h2>
+                            <span id="syncStatusTag" style="font-size: 11px; color: var(--success);">● SYNCED</span>
+                        </div>
+                        <div class="stats-grid" id="telemetryGrid">
+                            <div class="stat-card">
+                                <div class="stat-label">Terminal ID</div>
+                                <div class="stat-value highlight" id="val-terminal">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Speed</div>
+                                <div class="stat-value"><span id="val-speed">--</span> <span class="unit">km/h</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Latitude</div>
+                                <div class="stat-value" id="val-lat">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Longitude</div>
+                                <div class="stat-value" id="val-lng">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Heading / Direction</div>
+                                <div class="stat-value"><span id="val-heading">--</span>°</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Ignition (ACC)</div>
+                                <div class="stat-value" id="val-acc">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Live Mini Map -->
+                        <div style="margin-top: 16px; border-radius: 8px; overflow: hidden; height: 180px;"
+                            id="liveMap"></div>
+
+                        <div class="log-container" style="margin-top: 16px;">
+                            <h3>Telemetry Activity</h3>
+                            <ul id="logList">
+                                <li><span class="time">[00:00:00]</span> Monitoring initialized.</li>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- 3. Reels & Historical 3s Clips Section -->
+            <main id="reels-section" class="content-section">
+                <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>Reels & Historical Clips</h1>
+                        <p>Seamless 3-second historical dashcam footage synchronized with route coordinates</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button class="btn-ctrl btn-resume" id="btnRefreshReels">🔄 Refresh Clips</button>
+                    </div>
+                </div>
+
+                <div style="padding:16px">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label for="recordingSelect">Full recording</label>
+                        <a id="fullRecordingDownloadBtn" href="#"
+                            style="display: none; font-size: 13px; color: #38bdf8; text-decoration: none;">⬇ Download
+                            Full Recording</a>
+                    </div>
+                    <select id="recordingSelect" style="width: 100%;">
+                        <option value="">Select a session</option>
+                    </select>
+                    <video id="recordingVideo" controls playsinline
+                        style="display:block;width:100%;max-height:380px;background:#000;margin-top:12px"></video>
+                </div>
+                <div class="reels-container"
+                    style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 24px !important; height: 680px !important; min-height: 680px !important; margin-top: 16px !important;">
+                    <!-- Left: Scrollable Feed of 3-second Reel Cards -->
+                    <div class="reels-feed" id="reelsFeed"
+                        style="overflow-y: auto !important; height: 100% !important; max-height: 680px !important; display: flex !important; flex-direction: column !important; gap: 20px !important; padding-right: 12px !important;">
+                        <p style="color: var(--text-secondary);">Loading 3-second clips...</p>
+                    </div>
+
+                    <!-- Right: Synchronized Map & Telemetry Inspector -->
+                    <div class="reels-map-panel">
+                        <div
+                            style="padding: 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Playback GPS Synchronization</h3>
+                            <span id="reelSyncBadge" class="badge" style="background: var(--success);">SYNCED</span>
+                        </div>
+                        <div id="reelsMap"></div>
+                        <div
+                            style="padding: 16px; background: rgba(0,0,0,0.4); display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
+                            <div>Speed: <strong id="reelSpeed" style="color: var(--accent-primary);">-- km/h</strong>
+                            </div>
+                            <div>GPS: <strong id="reelCoords">--, --</strong></div>
+                            <div>Displayed Time: <strong id="reelTime">--</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 4. Simulation & Test Console Section -->
+            <main id="console-section" class="content-section">
+                <div class="page-title">
+                    <h1>Simulation & Protocol Test Console</h1>
+                    <p>Execute one-string JSON commands, inspect raw JT808 & JT1078 HEX packets, and control live
+                        scenarios</p>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="console-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3>Active Scenario Control</h3>
+                        <span id="simStatusBadge" class="badge" style="background: #64748b;">IDLE</span>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+                        <button class="btn-ctrl btn-start" id="btnStartIndore">▶ Start Indore Demo (1000s)</button>
+                        <button class="btn-ctrl btn-pause" id="btnPauseSim">⏸ Pause</button>
+                        <button class="btn-ctrl btn-resume" id="btnResumeSim">⏵ Resume</button>
+                        <button class="btn-ctrl btn-stop" id="btnStopSim">⏹ Stop</button>
+                    </div>
+                    <div
+                        style="background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 13px;">
+                        <span>Progress: <strong id="simProgressText">0 / 1000s (0.0%)</strong></span>
+                        <span>Terminal: <strong>013812345678 (CH1)</strong></span>
+                        <span>Scenario: <strong>indore-demo</strong></span>
+                    </div>
+                </div>
+
+                <!-- One-String Input Box -->
+                <div class="console-card">
+                    <h3>One-String Input Console</h3>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 14px;">
+                        Accepts either a <strong>JSON application command</strong>, a raw <strong>JT808 HEX
+                            string</strong> (starts and ends with 7E), or a raw <strong>JT1078 HEX string</strong>
+                        (starts with 30316364).
+                    </p>
+                    <div class="console-input-row">
+                        <select id="consoleMode" class="console-select">
+                            <option value="auto">Auto Detect</option>
+                            <option value="json">JSON Command</option>
+                            <option value="jt808">Raw JT808 HEX</option>
+                            <option value="jt1078">Raw JT1078 HEX</option>
+                        </select>
+                        <input type="text" id="oneStringInput" class="console-input"
+                            placeholder='{"action":"startSimulation","terminalId":"013812345678","channel":1,"scenario":"indore-demo",...}'>
+                        <button id="btnExecuteCommand" class="btn-primary" style="padding: 0 24px;">Execute</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <button class="btn-sm btn-logout" id="btnSampleJson" style="font-size: 11px;">Load Sample
+                            JSON</button>
+                        <button class="btn-sm btn-logout" id="btnSample808" style="font-size: 11px;">Load Sample JT808
+                            HEX</button>
+                        <button class="btn-sm btn-logout" id="btnSample1078" style="font-size: 11px;">Load Sample JT1078
+                            HEX</button>
+                    </div>
+                    <div class="console-result-box" id="consoleResultBox">// Command output, parsed protocol frame, and
+                        server response ACK will appear here...</div>
+                </div>
+            </main>
+
+            <!-- 5. Trip History Section -->
+            <main id="trips-section" class="content-section">
+                <div class="page-title">
+                    <h1>Trip History & Stops</h1>
+                    <p>Review daily routes and complete stop logs stored authoritatively in SQLite</p>
+                </div>
+                <div class="panel">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle ID</th>
+                                <th>Start Address</th>
+                                <th>Start Time</th>
+                                <th>Total Distance</th>
+                                <th>Max Speed</th>
+                                <th>Stops</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tripsTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center;">No trips recorded yet. Run simulation to
+                                    record trips.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+
+            <!-- 6. Incident Archive Section -->
+            <main id="archive-section" class="content-section">
+                <div class="page-title">
+                    <h1>Incident Archive</h1>
+                    <p>Review accident evidence, actual recorded video packages, and historical telemetry</p>
+                </div>
+                <div class="panel">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Accident ID</th>
+                                <th>Terminal ID</th>
+                                <th>Date / Time</th>
+                                <th>Speed (Impact)</th>
+                                <th>Alarm Type</th>
+                                <th>G-Force</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archiveTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;">No incidents recorded.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Accident Evidence Modal -->
+    <div id="accidentModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Evidence Package: <span id="modalAccidentId"></span></h2>
+                <button class="btn-close" id="btnCloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <!-- Left: Video & Telemetry -->
+                    <div class="modal-left">
+                        <div class="panel">
+                            <h3>Recorded Front Camera Evidence</h3>
+                            <video id="evidenceVideo" controls playsinline
+                                style="width: 100%; aspect-ratio: 16/9; border-radius: 8px; margin-top: 10px; background: #000; object-fit: contain;"></video>
+                        </div>
+                        <div class="panel" style="margin-top: 20px;">
+                            <h3>Synchronized Playback Telemetry</h3>
+                            <div class="sync-data">
+                                <p><strong>Time:</strong> <span id="syncTime">--:--:--</span></p>
+                                <p><strong>Speed:</strong> <span id="syncSpeed">--</span> km/h</p>
+                                <p><strong>GPS:</strong> <span id="syncLat">--</span>, <span id="syncLng">--</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Metadata & Timeline -->
+                    <div class="modal-right">
+                        <div class="panel">
+                            <h3>Incident Metadata</h3>
+                            <ul class="meta-list">
+                                <li><strong>Vehicle:</strong> <span id="metaVehicle"></span></li>
+                                <li><strong>Terminal:</strong> <span id="metaTerminal"></span></li>
+                                <li><strong>Alarm:</strong> <span id="metaAlarmType"></span></li>
+                                <li><strong>Impact Speed:</strong> <span id="metaImpactSpeed"></span> km/h</li>
+                                <li><strong>Prev Speed:</strong> <span id="metaPrevSpeed"></span> km/h</li>
+                                <li><strong>Measured G-Force:</strong> <span id="metaGForce"></span></li>
+                            </ul>
+                        </div>
+                        <div class="panel timeline-panel" style="margin-top: 20px;">
+                            <h3>Event Timeline</h3>
+                            <ul class="timeline-list" id="timelineList"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip Details Modal -->
+    <div id="tripModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Trip Details: <span id="modalTripId"></span></h2>
+                <button class="btn-close" id="btnCloseTripModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="panel">
+                    <h3>Stop History</h3>
+                    <ul class="timeline-list" id="tripStopList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <script>
+        const API_BASE_URL = 'http://100.31.90.51:3000';
+    </script>
+
+    <script>
+        function backendUrl(path) {
+            if (!path) return '';
+
+            if (/^https?:\/\//i.test(path)) {
+                return path;
+            }
+
+            return API_BASE_URL +
+                (path.startsWith('/') ? '' : '/') +
+                path;
+        }
+
+        const fleet = new Map();
+
+        let activeTerminalId = null;
+        let currentEvidenceData = null;
+
+        let liveHls = null;
+        let liveMap = null;
+        let liveMarker = null;
+
+        let reelsMap = null;
+        let reelsMarker = null;
+
+        let activeReelVideo = null;
+
+        let liveRetry = null;
+        let liveFragment = null;
+        let liveSyncRequest = 0;
+        let lastLiveSync = 0;
+
+        let historyHls = null;
+        let historyFragment = null;
+
+        let liveSessionId = null;
+        let reelSyncRequest = 0;
+
+        const knownReels = new Set();
+
+        const loginForm =
+            document.getElementById('loginForm');
+
+        const loginScreen =
+            document.getElementById('loginScreen');
+
+        const dashboardScreen =
+            document.getElementById('dashboardScreen');
+
+        const loginError =
+            document.getElementById('loginError');
+
+        const logoutBtn =
+            document.getElementById('logoutBtn');
+
+        const liveVideo =
+            document.getElementById('liveVideo');
+
+        const btnToggleAudio =
+            document.getElementById('btnToggleAudio');
+
+
+        // ==========================================
+        // AUTH
+        // ==========================================
+
+        const authToken =
+            sessionStorage.getItem(
+                'dashcam_auth_token'
+            );
+
+        if (authToken) {
+            loginScreen.style.display = 'none';
+            dashboardScreen.style.display = 'flex';
+
+            initApp();
+        }
+
+
+        loginForm.addEventListener(
+            'submit',
+            async (e) => {
+
+                e.preventDefault();
+
+                const username =
+                    document
+                        .getElementById(
+                            'loginUsername'
+                        )
+                        .value;
+
+                const password =
+                    document
+                        .getElementById(
+                            'loginPassword'
+                        )
+                        .value;
+
+                try {
+
+                    const res =
+                        await fetch(
+                            API_BASE_URL +
+                            '/api/auth/login',
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/json'
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        username,
+                                        password
+                                    })
+                            }
+                        );
+
+                    const data =
+                        await res.json();
+
+                    if (data.success) {
+
+                        sessionStorage.setItem(
+                            'dashcam_auth_token',
+                            data.token
+                        );
+
+                        loginScreen.style.opacity =
+                            '0';
+
+                        setTimeout(
+                            () => {
+
+                                loginScreen
+                                    .style
+                                    .display =
+                                    'none';
+
+                                dashboardScreen
+                                    .style
+                                    .display =
+                                    'flex';
+
+                                initApp();
+
+                            },
+                            300
+                        );
+
+                    } else {
+
+                        loginError.style.display =
+                            'block';
+                    }
+
+                } catch (err) {
+
+                    loginError.innerText =
+                        'Connection error';
+
+                    loginError.style.display =
+                        'block';
+                }
+            }
+        );
+
+
+        logoutBtn.addEventListener(
+            'click',
+            () => {
+
+                sessionStorage.removeItem(
+                    'dashcam_auth_token'
+                );
+
+                dashboardScreen.style.display =
+                    'none';
+
+                loginScreen.style.display =
+                    'flex';
+
+                loginScreen.style.opacity =
+                    '1';
+            }
+        );
+
+
+        // ==========================================
+        // NAVIGATION
+        // ==========================================
+
+        const navItems =
+            document.querySelectorAll(
+                '.nav-item'
+            );
+
+        const sections =
+            document.querySelectorAll(
+                '.content-section'
+            );
+
+
+        function switchToSection(
+            targetId
+        ) {
+
+            sections.forEach(
+                s =>
+                    s.classList.remove(
+                        'active'
+                    )
+            );
+
+            navItems.forEach(
+                n =>
+                    n.classList.remove(
+                        'active'
+                    )
+            );
+
+            const targetSection =
+                document.getElementById(
+                    targetId
+                );
+
+            if (targetSection) {
+
+                targetSection
+                    .classList
+                    .add('active');
+            }
+
+            const activeNav =
+                document.querySelector(
+                    `.nav-item[data-target="${targetId}"]`
+                );
+
+            if (activeNav) {
+
+                activeNav
+                    .classList
+                    .add('active');
+            }
+
+
+            if (
+                targetId ===
+                'reels-section'
+            ) {
+
+                loadReels();
+                loadRecordings();
+
+                setTimeout(
+                    () => {
+
+                        if (reelsMap) {
+                            reelsMap
+                                .invalidateSize();
+                        }
+
+                    },
+                    200
+                );
+
+            } else if (
+                targetId ===
+                'archive-section'
+            ) {
+
+                loadArchive();
+
+            } else if (
+                targetId ===
+                'trips-section'
+            ) {
+
+                loadTrips();
+
+            } else if (
+                targetId ===
+                'dashboard-section'
+            ) {
+
+                if (activeTerminalId) {
+
+                    initLivePlayer(
+                        activeTerminalId,
+                        1
+                    );
+                }
+
+                setTimeout(
+                    () => {
+
+                        if (liveMap) {
+                            liveMap
+                                .invalidateSize();
+                        }
+
+                    },
+                    200
+                );
+            }
+        }
+
+
+        navItems.forEach(
+            item => {
+
+                item.addEventListener(
+                    'click',
+                    e => {
+
+                        e.preventDefault();
+
+                        switchToSection(
+                            item.getAttribute(
+                                'data-target'
+                            )
+                        );
+                    }
+                );
+            }
+        );
+
+
+        document
+            .getElementById(
+                'backToFleetBtn'
+            )
+            .addEventListener(
+                'click',
+                () => {
+
+                    switchToSection(
+                        'vehicles-section'
+                    );
+                }
+            );
+
+
+        // ==========================================
+        // APP INITIALIZATION
+        // ==========================================
+
+        function initApp() {
+
+            try {
+
+                initLeafletMaps();
+
+            } catch (e) {
+
+                console.warn(
+                    'Map unavailable',
+                    e
+                );
+            }
+
+            // // setupConsoleControls();
+
+            setupWebSocket();
+        }
+
+
+        // ==========================================
+        // MAP
+        // ==========================================
+
+        function initLeafletMaps() {
+
+            if (
+                !liveMap &&
+                document.getElementById(
+                    'liveMap'
+                )
+            ) {
+
+                liveMap =
+                    L.map('liveMap')
+                        .setView(
+                            [20, 0],
+                            2
+                        );
+
+                L.tileLayer(
+                    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+                ).addTo(
+                    liveMap
+                );
+            }
+
+
+            if (
+                !reelsMap &&
+                document.getElementById(
+                    'reelsMap'
+                )
+            ) {
+
+                reelsMap =
+                    L.map('reelsMap')
+                        .setView(
+                            [20, 0],
+                            2
+                        );
+
+                L.tileLayer(
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    {
+                        maxZoom: 19
+                    }
+                ).addTo(
+                    reelsMap
+                );
+
+                reelsMarker = null;
+            }
+        }
+
+
+        // ==========================================
+        // LIVE JT1078 PLAYER
+        // ==========================================
+
+        function initLivePlayer(
+            terminalId,
+            channel
+        ) {
+
+            if (!terminalId) {
+
+                const badge =
+                    document
+                        .getElementById(
+                            'streamStatusBadge'
+                        );
+
+                if (badge) {
+
+                    badge.innerText =
+                        'Waiting for DashCam';
+                }
+
+                console.log(
+                    'Waiting for real DashCam terminal ID'
+                );
+
+                return;
+            }
+
+
+            clearTimeout(
+                liveRetry
+            );
+
+
+            const hlsUrl =
+                backendUrl(
+                    `/media/live/${terminalId}_${channel}/live.m3u8`
+                );
+
+
+            const badge =
+                document.getElementById(
+                    'streamStatusBadge'
+                );
+
+
+            liveFragment = null;
+
+
+            if (liveHls) {
+
+                liveHls.destroy();
+
+                liveHls = null;
+            }
+
+
+            const retry = () => {
+
+                clearTimeout(
+                    liveRetry
+                );
+
+                badge.innerText =
+                    'Waiting for video…';
+
+                liveRetry =
+                    setTimeout(
+                        () => {
+
+                            initLivePlayer(
+                                terminalId,
+                                channel
+                            );
+
+                        },
+                        2000
+                    );
+            };
+
+
+            if (
+                typeof Hls !==
+                'undefined' &&
+                Hls.isSupported()
+            ) {
+
+                const player =
+                    new Hls({
+                        liveSyncDurationCount:
+                            2,
+
+                        enableWorker:
+                            true
+                    });
+
+
+                liveHls =
+                    player;
+
+
+                player.attachMedia(
+                    liveVideo
+                );
+
+
+                player.loadSource(
+                    hlsUrl
+                );
+
+
+                player.on(
+                    Hls.Events
+                        .MANIFEST_PARSED,
+
+                    () => {
+
+                        badge.innerText =
+                            'VIDEO READY';
+
+                        liveVideo
+                            .play()
+                            .catch(
+                                () => {
+
+                                    badge.innerText =
+                                        'Press Play to start';
+                                }
+                            );
+                    }
+                );
+
+
+                player.on(
+                    Hls.Events
+                        .FRAG_CHANGED,
+
+                    (_, data) => {
+
+                        liveFragment =
+                            data.frag;
+                    }
+                );
+
+
+                player.on(
+                    Hls.Events.ERROR,
+
+                    (_, data) => {
+
+                        if (
+                            data.fatal &&
+                            liveHls ===
+                            player
+                        ) {
+
+                            retry();
+                        }
+                    }
+                );
+
+            } else if (
+                liveVideo.canPlayType(
+                    'application/vnd.apple.mpegurl'
+                )
+            ) {
+
+                liveVideo.src =
+                    hlsUrl;
+
+                liveVideo.onerror =
+                    retry;
+
+                liveVideo
+                    .play()
+                    .catch(
+                        () => { }
+                    );
+
+            } else {
+
+                badge.innerText =
+                    'HLS player unavailable';
+            }
+
+
+            btnToggleAudio.onclick =
+                () => {
+
+                    liveVideo.muted =
+                        !liveVideo.muted;
+
+                    btnToggleAudio.innerText =
+                        liveVideo.muted
+                            ? 'Unmute Audio'
+                            : 'Mute Audio';
+                };
+        }
+
+
+        // ==========================================
+        // TELEMETRY UI
+        // ==========================================
+
+        function updateDashboardTelemetry(
+            data
+        ) {
+
+            console.log(
+                'REAL JT808 TELEMETRY:',
+                data
+            );
+
+
+            document
+                .getElementById(
+                    'val-terminal'
+                )
+                .innerText =
+                data.terminalId ??
+                '-';
+
+
+            document
+                .getElementById(
+                    'val-speed'
+                )
+                .innerText =
+                data.speed ??
+                '-';
+
+
+            document
+                .getElementById(
+                    'val-lat'
+                )
+                .innerText =
+                data.latitude != null
+                    ? Number(
+                        data.latitude
+                    ).toFixed(6)
+                    : '-';
+
+
+            document
+                .getElementById(
+                    'val-lng'
+                )
+                .innerText =
+                data.longitude != null
+                    ? Number(
+                        data.longitude
+                    ).toFixed(6)
+                    : '-';
+
+
+            document
+                .getElementById(
+                    'val-heading'
+                )
+                .innerText =
+                data.heading ??
+                '-';
+
+
+            document
+                .getElementById(
+                    'val-acc'
+                )
+                .innerText =
+                data.ignition ==
+                    null
+                    ? '-'
+                    : data.ignition
+                        ? 'ON'
+                        : 'OFF';
+
+
+            if (
+                liveMap &&
+                data.latitude != null &&
+                data.longitude != null
+            ) {
+
+                if (!liveMarker) {
+
+                    liveMarker =
+                        L.marker([
+                            data.latitude,
+                            data.longitude
+                        ])
+                            .addTo(
+                                liveMap
+                            );
+
+                    liveMap.setView(
+                        [
+                            data.latitude,
+                            data.longitude
+                        ],
+                        13
+                    );
+
+                } else {
+
+                    liveMarker
+                        .setLatLng([
+                            data.latitude,
+                            data.longitude
+                        ]);
+
+                    liveMap.panTo([
+                        data.latitude,
+                        data.longitude
+                    ]);
+                }
+            }
+
+
+            addLog(
+                `[${data.terminalId}] Speed: ${data.speed ?? '-'} km/h`
+            );
+        }
+
+
+        function addLog(msg) {
+
+            const li =
+                document.createElement(
+                    'li'
+                );
+
+
+            li.innerHTML =
+                `<span class="time">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+
+
+            const list =
+                document.getElementById(
+                    'logList'
+                );
+
+
+            list.insertBefore(
+                li,
+                list.firstChild
+            );
+
+
+            if (
+                list.children.length >
+                25
+            ) {
+
+                list.removeChild(
+                    list.lastChild
+                );
+            }
+        }
+
+
+        // ==========================================
+        // VEHICLE FLEET
+        // ==========================================
+
+        function renderFleet() {
+
+            const grid =
+                document.getElementById(
+                    'vehiclesGrid'
+                );
+
+
+            if (!grid) return;
+
+
+            if (
+                fleet.size ===
+                0
+            ) {
+
+                grid.innerHTML =
+                    '<p style="color:var(--text-secondary);grid-column:1/-1;">Waiting for real DashCam data...</p>';
+
+                return;
+            }
+
+
+            grid.innerHTML =
+                '';
+
+
+            fleet.forEach(
+                data => {
+
+                    const card =
+                        document.createElement(
+                            'div'
+                        );
+
+
+                    const displayId =
+                        data.terminalId ||
+                        '-';
+
+
+                    const isActive =
+                        data.terminalId ===
+                        activeTerminalId;
+
+
+                    const isOnline =
+                        data
+                            ._lastReceivedAt &&
+                        Date.now() -
+                        data
+                            ._lastReceivedAt <
+                        30000;
+
+
+                    const statusText =
+                        isOnline
+                            ? 'ONLINE'
+                            : 'OFFLINE';
+
+
+                    const statusClass =
+                        isOnline
+                            ? 'active'
+                            : 'offline';
+
+
+                    const speed =
+                        data.speed ??
+                        '-';
+
+
+                    const location =
+                        data.latitude !=
+                            null &&
+                            data.longitude !=
+                            null
+
+                            ? `${Number(data.latitude).toFixed(4)}, ${Number(data.longitude).toFixed(4)}`
+
+                            : '-';
+
+
+                    let ignition =
+                        '--';
+
+
+                    if (
+                        data.ignition ===
+                        true
+                    ) {
+
+                        ignition =
+                            '<span style="color:var(--success)">Engine ON</span>';
+
+                    } else if (
+                        data.ignition ===
+                        false
+                    ) {
+
+                        ignition =
+                            '<span style="color:var(--danger)">Engine OFF</span>';
+                    }
+
+
+                    card.className =
+                        `vehicle-card ${isActive ? 'active-card' : ''}`;
+
+
+                    card.innerHTML =
+                        `
+                    <div class="vehicle-card-header">
+
+                        <div class="vehicle-id">
+                            🚗 ${displayId}
+                        </div>
+
+                        <div class="vehicle-status ${statusClass}">
+                            ${statusText}
+                        </div>
+
+                    </div>
+
+                    <div class="vehicle-details">
+
+                        <p>
+                            Speed:
+                            <span>
+                                ${speed} km/h
+                            </span>
+                        </p>
+
+                        <p>
+                            Location:
+                            <span>
+                                ${location}
+                            </span>
+                        </p>
+
+                        <p>
+                            Status:
+                            ${ignition}
+                        </p>
+
+                    </div>
+                `;
+
+
+                    card.onclick =
+                        () => {
+
+                            activeTerminalId =
+                                data.terminalId;
+
+
+                            initLivePlayer(
+                                activeTerminalId,
+                                1
+                            );
+
+
+                            updateDashboardTelemetry(
+                                data
+                            );
+
+
+                            renderFleet();
+
+
+                            switchToSection(
+                                'dashboard-section'
+                            );
+                        };
+
+
+                    grid.appendChild(
+                        card
+                    );
+                }
+            );
+        }
+
+
+        // ==========================================
+        // REMOTE SOCKET
+        // ==========================================
+
+        function setupWebSocket() {
+
+            const socket =
+                io(
+                    API_BASE_URL,
+                    {
+                        transports: [
+                            'websocket',
+                            'polling'
+                        ]
+                    }
+                );
+
+
+            socket.on(
+                'connect',
+                () => {
+
+                    console.log(
+                        'ADMIN CONNECTED TO REMOTE SERVER:',
+                        socket.id
+                    );
+                }
+            );
+
+
+            socket.on(
+                'connect_error',
+                err => {
+
+                    console.error(
+                        'REMOTE SERVER ERROR:',
+                        err.message
+                    );
+                }
+            );
+
+
+            socket.on(
+                'disconnect',
+                reason => {
+
+                    console.warn(
+                        'REMOTE SERVER DISCONNECTED:',
+                        reason
+                    );
+                }
+            );
+
+
+            // REAL JT808 DATA
+
+            socket.on(
+                'telemetry',
+                data => {
+
+                    if (
+                        !data ||
+                        !data.terminalId
+                    ) {
+
+                        return;
+                    }
+
+
+                    console.log(
+                        'REAL JT808 TELEMETRY:',
+                        data
+                    );
+
+
+                    data._lastReceivedAt =
+                        Date.now();
+
+
+                    fleet.set(
+                        data.terminalId,
+                        data
+                    );
+
+
+                    if (
+                        !activeTerminalId
+                    ) {
+
+                        activeTerminalId =
+                            data.terminalId;
+
+
+                        initLivePlayer(
+                            activeTerminalId,
+                            1
+                        );
+                    }
+
+
+                    if (
+                        data.terminalId ===
+                        activeTerminalId
+                    ) {
+
+                        updateDashboardTelemetry(
+                            data
+                        );
+                    }
+
+
+                    renderFleet();
+                }
+            );
+
+
+            // PHONE/JPEG LIVE FRAME
+
+            socket.on(
+                'real_live_frame',
+                data => {
+
+                    if (
+                        !data ||
+                        data.terminalId !==
+                        activeTerminalId
+                    ) {
+
+                        return;
+                    }
+
+
+                    const video =
+                        document.getElementById(
+                            'liveVideo'
+                        );
+
+
+                    const image =
+                        document.getElementById(
+                            'liveFrameImg'
+                        );
+
+
+                    const badge =
+                        document.getElementById(
+                            'streamStatusBadge'
+                        );
+
+
+                    video.style.display =
+                        'none';
+
+
+                    if (liveHls) {
+
+                        try {
+
+                            liveHls.stopLoad();
+
+                        } catch (e) { }
+                    }
+
+
+                    image.style.display =
+                        'block';
+
+
+                    image.src =
+                        'data:image/jpeg;base64,' +
+                        data.image;
+
+
+                    badge.innerText =
+                        'REAL CAMERA';
+
+
+                    badge.style.background =
+                        '#10b981';
+                }
+            );
+
+
+            // JT1078 SEGMENTS
+
+            socket.on(
+                'media_segment',
+                seg => {
+
+                    if (!seg) return;
+
+
+                    console.log(
+                        'JT1078 SEGMENT:',
+                        seg
+                    );
+
+
+                    if (
+                        seg.terminalId ===
+                        activeTerminalId &&
+                        seg.sessionId !==
+                        liveSessionId
+                    ) {
+
+                        liveSessionId =
+                            seg.sessionId;
+
+
+                        initLivePlayer(
+                            activeTerminalId,
+                            seg.channel ||
+                            1
+                        );
+                    }
+
+
+                    const section =
+                        document.getElementById(
+                            'reels-section'
+                        );
+
+
+                    if (
+                        section &&
+                        section
+                            .classList
+                            .contains(
+                                'active'
+                            )
+                    ) {
+
+                        loadRecordings();
+
+                        loadReels();
+                    }
+                }
+            );
+
+
+            // ACCIDENT
+
+            socket.on(
+                'accident_alert',
+                acc => {
+
+                    if (!acc) return;
+
+
+                    document
+                        .getElementById(
+                            'alertTerminal'
+                        )
+                        .innerText =
+                        acc.terminalId ??
+                        '-';
+
+
+                    document
+                        .getElementById(
+                            'alertVehicle'
+                        )
+                        .innerText =
+                        acc.vehicleId ??
+                        '-';
+
+
+                    document
+                        .getElementById(
+                            'alertSpeed'
+                        )
+                        .innerText =
+                        acc.speedAtImpact ??
+                        '-';
+
+
+                    document
+                        .getElementById(
+                            'alertAlarmType'
+                        )
+                        .innerText =
+                        acc.alarmType ??
+                        '-';
+
+
+                    document
+                        .getElementById(
+                            'accidentAlert'
+                        )
+                        .classList
+                        .remove(
+                            'hidden'
+                        );
+                }
+            );
+        }
+    </script>
+</body>
+
+</html>
+<script>
+async function loadRecordings() {
+    const tid = activeTerminalId || "872312858278";
+    try {
+        const res = await fetch(backendUrl(`/api/media/recordings?terminalId=${tid}&channel=1`));
+        const sessions = await res.json();
+        const select = document.getElementById('recordingSelect');
+        select.innerHTML = '<option value="">Select a video session...</option>';
+        sessions.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.playlist;
+            opt.innerText = `Record Session: ${s.sessionId} (${new Date(s.startUtcMs).toLocaleString()})`;
+            select.appendChild(opt);
+        });
+        select.onchange = (e) => {
+            const url = e.target.value;
+            if (!url) return;
+            const video = document.getElementById('recordingVideo');
+            document.getElementById('fullRecordingDownloadBtn').href = backendUrl(url);
+            document.getElementById('fullRecordingDownloadBtn').style.display = 'block';
+            if (typeof Hls !== 'undefined' && Hls.isSupported() && url.endsWith('.m3u8')) {
+                if (window.historyHls) window.historyHls.destroy();
+                window.historyHls = new Hls();
+                window.historyHls.loadSource(backendUrl(url));
+                window.historyHls.attachMedia(video);
+                window.historyHls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            } else {
+                video.src = backendUrl(url);
+                video.play();
+            }
+        };
+    } catch(e) { console.error('Error fetching recordings', e); }
+}
+
+// बाकी पेजों को क्रैश होने से बचाने के लिए खाली फंक्शन्स
+function loadReels() { document.getElementById('reelsFeed').innerHTML = '<p style="color:gray;">Select a session above to watch full recording.</p>'; }
+function loadTrips() {}
+function loadArchive() {}
+</script>

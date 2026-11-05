@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Inurum Fleet Operations - Enterprise Dashcam & Telematics SaaS</title>
+  <meta name="description" content="Professional Samsara-inspired Fleet Operations Platform. Live GPS fleet tracking, dual-channel 1080P dashcam surveillance, safety coaching inbox, and video retrieval.">
+
+  <!-- Typography: Inter + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- hls.js for Real HLS Video Streaming -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <!-- ── Authentication & Sign-in Modal ────────────────────────────── -->
+  <div id="authBackdrop" class="auth-backdrop" style="display:none;">
+    <div class="auth-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="brand-icon" style="width:36px;height:36px;border-radius:6px;background:#0f172a;display:flex;align-items:center;justify-content:center;color:#fff;">
+          <svg style="width:20px;height:20px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+        </div>
+        <div>
+          <h2 style="font-size:16px;font-weight:700;color:var(--text-primary);">INURUM FLEET OPERATIONS</h2>
+          <p style="font-size:11px;color:var(--text-muted);">Enterprise Dashcam & JT/T 808 Telematics</p>
+        </div>
+      </div>
+
+      <div id="authAlert" style="display:none;padding:8px 12px;border-radius:4px;font-size:11px;margin-bottom:12px;"></div>
+
+      <form id="authForm" onsubmit="return false;" style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">Account Email / Username</label>
+          <input type="text" id="inputAuthEmail" value="Inurum" required style="width:100%;height:36px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:4px;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">Password</label>
+          <input type="password" id="inputAuthPassword" value="as123456" required style="width:100%;height:36px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:4px;">
+        </div>
+        <button type="submit" id="btnSubmitAuth" class="btn-primary-wide">Sign In to Fleet Console &rarr;</button>
+      </form>
+
+      <div style="margin:16px 0 10px 0;text-align:center;font-size:11px;color:var(--text-muted);position:relative;">
+        <span style="background:#fff;padding:0 8px;">Or select demo account</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" class="btn-ctrl-outline demo-btn" data-user="Inurum" data-pass="as123456" style="padding:6px;font-size:11px;justify-content:center;">
+          👑 Inurum Master
+        </button>
+        <button type="button" class="btn-ctrl-outline demo-btn" data-user="admin@apexlogistics.com" data-pass="admin123" style="padding:6px;font-size:11px;justify-content:center;">
+          🏢 Apex Logistics
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Master App Shell Layout ───────────────────────────────────── -->
+  <div class="app-shell" id="appShell">
+
+    <!-- ── Left Collapsible Navigation Sidebar ───────────────────── -->
+    <aside class="app-sidebar" id="appSidebar">
+      <!-- Sidebar Header -->
+      <div class="sidebar-header">
+        <div class="brand-wrap">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">Inurum Fleet</span>
+            <span class="brand-sub" id="sidebarOrgLabel">WanWay Master</span>
+          </div>
+        </div>
+        <button class="sidebar-toggle-btn" id="btnToggleSidebar" title="Collapse / Expand Sidebar (Ctrl + B)">
+          <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Fleet Monitoring</div>
+        <a class="nav-item active" data-route="dashboard" id="navDashboard">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <span class="nav-label">Dashboard Overview</span>
+        </a>
+        <a class="nav-item" data-route="live" id="navLive">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </div>
+          <span class="nav-label">Live Monitoring</span>
+          <span class="nav-badge" style="background:#dcfce7;color:#15803d;" id="badgeLiveCount">● 2</span>
+        </a>
+
+        <div class="nav-section-title">Safety & Video</div>
+        <a class="nav-item" data-route="video" id="navVideo">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+          <span class="nav-label">Video Center</span>
+        </a>
+        <a class="nav-item" data-route="safety" id="navSafety">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <span class="nav-label">Safety Inbox</span>
+          <span class="nav-badge" style="background:#fee2e2;color:#b91c1c;" id="badgeAlertCount">1</span>
+        </a>
+
+        <div class="nav-section-title">Operations</div>
+        <a class="nav-item" data-route="vehicles" id="navVehicles">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <span class="nav-label">Vehicles & Devices</span>
+        </a>
+        <a class="nav-item" data-route="trips" id="navTrips">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <span class="nav-label">Trips & Routes</span>
+        </a>
+
+        <div class="nav-section-title">Management</div>
+        <a class="nav-item" data-route="admin" id="navAdmin">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span class="nav-label">Administration</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Footer User Profile -->
+      <div class="sidebar-footer">
+        <div class="user-profile-badge">
+          <div class="avatar-circle" id="sidebarAvatar">IM</div>
+          <div class="user-meta">
+            <span class="user-name" id="sidebarUserName">Inurum Master</span>
+            <span class="user-role" id="sidebarUserRole">SUPER_ADMIN</span>
+          </div>
+        </div>
+        <button class="sidebar-toggle-btn" id="btnSignOut" title="Sign Out">
+          <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main Application Column ───────────────────────────────── -->
+    <div class="app-main">
+
+      <!-- ── Top Header Bar ──────────────────────────────────────── -->
+      <header class="top-header">
+        <div class="header-left">
+          <div class="breadcrumbs">
+            <span>Fleet Operations</span>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-active" id="breadcrumbActiveTitle">Dashboard Overview</span>
+          </div>
+
+          <div class="global-search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search plate, driver, or terminal IMEI...">
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Gateway Status Ticker -->
+          <div class="gateway-status-pill">
+            <span class="pulsing-dot"></span>
+            <span>JT808: 7800 • JT1078: 10780 ONLINE</span>
+          </div>
+
+          <!-- Live Clock -->
+          <div class="live-clock-badge" id="liveClockDisplay">IST --:--:--</div>
+
+          <!-- Quota Badge -->
+          <div class="quota-meter-badge" title="Monthly Live Stream Quota Balance">
+            <span>Live Quota:</span>
+            <strong id="headerQuotaMinutes">253.8m left</strong>
+          </div>
+
+          <!-- Direct APK Download Link -->
+          <a href="/download/app.apk" download="Inurum_Dashcam_Client.apk" class="btn-ctrl btn-ctrl-outline" style="text-decoration:none;" title="Download Android Client APK">
+            <span>📱 APK</span>
+          </a>
+
+          <!-- Notifications Bell -->
+          <button class="header-action-btn" id="btnNotifications" title="Fleet Notifications">
+            <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="btn-badge-count" id="headerAlertBadgeCount">1</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ── Content Viewport ────────────────────────────────────── -->
+      <main class="app-content-viewport" id="contentViewport">
+
+        <!-- ══ SCREEN 1: DASHBOARD OVERVIEW ════════════════════════ -->
+        <div class="view-container active" id="viewDashboard">
+          <div class="overview-grid">
+
+            <!-- 5-Metric Stat KPI Cards Strip -->
+            <div class="stats-strip">
+              <!-- Total Fleet -->
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span>Total Fleet</span>
+                  <div class="stat-icon">🚚</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-number" id="kpiTotalCount">5</span>
+                  <span class="stat-unit">vehicles</span>
+                </div>
+                <div class="stat-subtext">
+                  <span class="badge-chip online" id="kpiOnlineCount">● 3 Online</span>
+                  <span class="badge-chip offline" id="kpiOfflineCount">1 Offline</span>
+                </div>
+              </div>
+
+              <!-- Operational State -->
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span>Driving Status</span>
+                  <div class="stat-icon">⚡</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-number" id="kpiDrivingCount">3</span>
+                  <span class="stat-unit">moving</span>
+                </div>
+                <div class="stat-subtext">
+                  <span class="badge-chip idle" id="kpiIdleCount">1 Idling</span>
+                  <span style="color:var(--text-muted);">1 Parked</span>
+                </div>
+              </div>
+
+              <!-- Active Live Streams -->
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span>Active Live Streams</span>
+                  <div class="stat-icon">📹</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-number" id="kpiLiveStreamsCount">2</span>
+                  <span class="stat-unit">channels</span>
+                </div>
+                <div class="stat-subtext">
+                  <span style="color:var(--color-success);font-weight:600;">1080P FHD (30 FPS)</span>
+                </div>
+              </div>
+
+              <!-- Safety Events (24h) -->
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span>Safety Events (24h)</span>
+                  <div class="stat-icon">🚨</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-number" id="kpiSafetyEventsCount" style="color:var(--color-danger);">1</span>
+                  <span class="stat-unit">critical</span>
+                </div>
+                <div class="stat-subtext">
+                  <span class="badge-chip critical">Forward Collision</span>
+                </div>
+              </div>
+
+              <!-- Device Health -->
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span>Hardware Health</span>
+                  <div class="stat-icon">📡</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-number" id="kpiHealthRate" style="color:var(--color-success);">100%</span>
+                  <span class="stat-unit">uptime</span>
+                </div>
+                <div class="stat-subtext">
+                  <span>TCP 7800 Sockets Active</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fleet Activity Overview Map -->
+            <div class="overview-map-card">
+              <div class="card-header-bar">
+                <div class="card-title-group">
+                  <h3 class="card-title">Live Fleet Activity Map</h3>
+                  <span class="card-subtitle" id="overviewMapSubtitle">Real-time GPS telemetry via JT/T 808</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <button class="btn-ctrl btn-ctrl-outline" id="btnCenterOverviewMap" style="height:28px;">⛶ Fit Fleet</button>
+                  <button class="btn-ctrl btn-ctrl-primary" id="btnGoToLiveFromOverview" style="height:28px;">▶ Live Surveillance &rarr;</button>
+                </div>
+              </div>
+              <div class="map-container-box" id="overviewMapContainer"></div>
+            </div>
+
+            <!-- Lower Split Deck: Recent Safety Incidents & Recent Video Captures -->
+            <div class="overview-lower-deck">
+              <!-- Left: Recent Safety Events -->
+              <div class="deck-panel-card">
+                <div class="card-header-bar">
+                  <div class="card-title-group">
+                    <h3 class="card-title">Recent Safety Incidents & ADAS Alerts</h3>
+                    <span class="card-subtitle">AI dashcam detection</span>
+                  </div>
+                  <button class="btn-table-action" id="btnViewAllSafety">View Inbox &rarr;</button>
+                </div>
+                <div class="enterprise-table-wrap">
+                  <table class="enterprise-table">
+                    <thead>
+                      <tr>
+                        <th>Severity</th>
+                        <th>Time</th>
+                        <th>Vehicle & Plate</th>
+                        <th>Driver</th>
+                        <th>Incident Classification</th>
+                        <th>Speed</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="overviewSafetyTableBody">
+                      <!-- Injected via app.js -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Right: Recent Recordings -->
+              <div class="deck-panel-card">
+                <div class="card-header-bar">
+                  <div class="card-title-group">
+                    <h3 class="card-title">Recent Video Captures</h3>
+                    <span class="card-subtitle">30s Event clips & snapshots</span>
+                  </div>
+                  <button class="btn-table-action" id="btnViewAllRecordings">Video Center &rarr;</button>
+                </div>
+                <div class="recordings-list" id="overviewRecordingsList">
+                  <!-- Injected via app.js -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 2: LIVE MONITORING ═══════════════════════════ -->
+        <div class="view-container" id="viewLive">
+          <div class="live-monitoring-layout">
+
+            <!-- Left Vehicle Selection Sidebar (340px) -->
+            <div class="vehicles-roster-column">
+              <div class="roster-header">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);">Fleet Terminals</h3>
+                  <span class="badge-chip online" id="rosterOnlineBadge">3 Active</span>
+                </div>
+                <div class="roster-filter-pills">
+                  <button class="filter-pill active" data-filter="ALL">All</button>
+                  <button class="filter-pill" data-filter="ONLINE">Online</button>
+                  <button class="filter-pill" data-filter="MOVING">Driving</button>
+                  <button class="filter-pill" data-filter="IDLE">Idle</button>
+                  <button class="filter-pill" data-filter="OFFLINE">Offline</button>
+                </div>
+              </div>
+              <div class="vehicle-search-row">
+                <input type="text" id="rosterSearchInput" class="vehicle-search-input" placeholder="Search vehicle plate or driver...">
+              </div>
+              <div class="vehicle-cards-scroll" id="vehicleRosterCardsContainer">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+
+            <!-- Right Live Stream & Telematics Column -->
+            <div class="live-stream-column">
+
+              <!-- Live Player Deck -->
+              <div class="live-player-deck">
+                <!-- Header Control Bar -->
+                <div class="player-header-bar">
+                  <!-- Active Vehicle Meta -->
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div class="hsrp-plate" id="activeVehiclePlateChip">
+                      <span class="ind-tag">IND</span>
+                      <span id="activePlateText">MP-09-WW-4359</span>
+                    </div>
+                    <div>
+                      <span style="font-size:12px;font-weight:700;color:var(--text-primary);" id="activeVehicleTitle">WanWay H20P Dashcam</span>
+                      <span style="font-size:11px;color:var(--text-muted);" id="activeDriverText">• Sanket Jain (IMEI: 860871080043592)</span>
+                    </div>
+                  </div>
+
+                  <!-- Channel Switcher -->
+                  <div class="player-channel-tabs">
+                    <button class="channel-tab-btn active" data-channel="dual" id="btnTabDual">🔲 Dual Screens (CH1+CH2)</button>
+                    <button class="channel-tab-btn" data-channel="1" id="btnTabCh1">🛣️ Road (CH1)</button>
+                    <button class="channel-tab-btn" data-channel="2" id="btnTabCh2">👤 Cabin (CH2)</button>
+                    <button class="channel-tab-btn" data-channel="pip" id="btnTabPip">🖼️ PiP</button>
+                  </div>
+
+                  <!-- Player Action Controls -->
+                  <div class="player-action-group">
+                    <span class="ttl-timer-chip" id="streamTtlTimer">⏱️ 120s</span>
+                    <button class="btn-ctrl btn-ctrl-primary" id="btnStartStream">▶ Start Live</button>
+                    <button class="btn-ctrl btn-ctrl-stop" id="btnStopStream" style="display:none;">⏹ Stop</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnToggleNightVision" title="Toggle IR Night Vision">🌙 IR</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnSnapshot" title="Capture Snapshot">📸</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnAudioToggle" title="Audio Toggle">🎙️ Audio</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnFullscreen" title="Fullscreen">⛶</button>
+                  </div>
+                </div>
+
+                <!-- Video Viewport -->
+                <div class="video-viewport-wrapper" id="videoViewportWrapper">
+                  <!-- Connecting State Overlay -->
+                  <div class="connecting-overlay-screen" id="streamConnectingOverlay" style="display:none;">
+                    <div class="spinner-ring" style="width:32px;height:32px;border-width:3px;"></div>
+                    <span style="font-size:12px;font-weight:600;color:#e2e8f0;" id="streamConnectingText">Connecting to 4G Dashcam Stream (Port 10780)...</span>
+                  </div>
+
+                  <!-- Dual Video Grid -->
+                  <div class="dual-camera-grid" id="dualCameraGrid">
+                    <!-- Screen 1: Road Camera (CH1) -->
+                    <div class="camera-screen-box" id="screenRoadWrap">
+                      <div class="screen-label-badge">
+                        <span style="color:#10b981;">●</span>
+                        <span>CH1: ROAD FACING (1080P FHD)</span>
+                      </div>
+                      <video id="videoRoad" autoplay muted playsinline></video>
+                      <div class="telemetry-osd-overlay">
+                        <div>CAM1 ROAD • 1080P@30FPS • <span id="osdTimeRoad">LIVE</span></div>
+                        <div id="osdTelemetryRoad">SPEED: 52 KM/H | 22.7339°N, 75.8615°E</div>
+                      </div>
+                    </div>
+
+                    <!-- Screen 2: Cabin Camera (CH2) -->
+                    <div class="camera-screen-box" id="screenCabinWrap">
+                      <div class="screen-label-badge">
+                        <span style="color:#10b981;">●</span>
+                        <span>CH2: DRIVER CABIN DMS (720P HD)</span>
+                      </div>
+                      <video id="videoCabin" autoplay muted playsinline></video>
+                      <div class="telemetry-osd-overlay">
+                        <div>CAM2 CABIN DMS • 720P@25FPS • <span id="osdTimeCabin">LIVE</span></div>
+                        <div>DRIVER: SANKET JAIN • SEATBELT: OK</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Bottom Subdeck: Selected Vehicle Map & Hardware Diagnostics -->
+              <div class="live-bottom-subdeck">
+                <!-- Vehicle GPS Map Card -->
+                <div class="subdeck-panel">
+                  <div class="card-header-bar" style="padding:8px 14px;">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary);">Vehicle GPS Tracking</span>
+                    <span style="font-size:11px;color:var(--text-muted);" id="subdeckAddress">Indore City, Madhya Pradesh</span>
+                  </div>
+                  <div style="flex:1;position:relative;" id="liveFocusMapContainer"></div>
+                </div>
+
+                <!-- Real-Time Hardware Diagnostics -->
+                <div class="subdeck-panel">
+                  <div class="card-header-bar" style="padding:8px 14px;">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-primary);">Hardware Diagnostics</span>
+                    <span class="badge-chip online">JT808 HEALTHY</span>
+                  </div>
+                  <div class="diagnostics-grid">
+                    <div class="diagnostic-item">
+                      <span class="diag-label">Terminal IMEI</span>
+                      <span class="diag-val" id="diagImei">860871080043592</span>
+                    </div>
+                    <div class="diagnostic-item">
+                      <span class="diag-label">Vehicle Speed</span>
+                      <span class="diag-val" id="diagSpeed" style="color:var(--color-primary);">52 km/h</span>
+                    </div>
+                    <div class="diagnostic-item">
+                      <span class="diag-label">Socket Port</span>
+                      <span class="diag-val">TCP 7800</span>
+                    </div>
+                    <div class="diagnostic-item">
+                      <span class="diag-label">Media Port</span>
+                      <span class="diag-val">TCP 10780</span>
+                    </div>
+                    <div class="diagnostic-item">
+                      <span class="diag-label">Power Voltage</span>
+                      <span class="diag-val" id="diagVoltage">Unavailable</span>
+                    </div>
+                    <div class="diagnostic-item">
+                      <span class="diag-label">GPS Satellites</span>
+                      <span class="diag-val" id="diagSats">Unavailable</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 3: VIDEO CENTER ══════════════════════════════ -->
+        <div class="view-container" id="viewVideo">
+          <div class="video-center-layout">
+
+            <!-- Top Filter & Search Bar -->
+            <div class="vc-top-filter-bar">
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Vehicle & Asset</label>
+                <select id="vcVehicleSelect" class="vc-select-input">
+                  <option value="860871080043592">MP-09-WW-4359 • WanWay H20P 4G Dashcam</option>
+                  <option value="872312858278">VEH-8278 • MDVR Dual Cam</option>
+                </select>
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Recording Date</label>
+                <input type="date" id="vcDatePicker" class="vc-date-input">
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Time Window</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="time" id="vcTimeStart" value="00:00" class="vc-time-input">
+                  <span style="font-size:11px;color:var(--text-muted);">to</span>
+                  <input type="time" id="vcTimeEnd" value="23:59" class="vc-time-input">
+                </div>
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Camera Lens</label>
+                <div class="player-channel-tabs" style="margin:0;">
+                  <button class="channel-tab-btn active" data-vc-channel="1" id="btnVcChannel1">🛣️ Road Facing (CH1)</button>
+                  <button class="channel-tab-btn" data-vc-channel="2" id="btnVcChannel2">👤 Driver Cabin (CH2)</button>
+                </div>
+              </div>
+
+              <div class="vc-action-group">
+                <button class="btn-ctrl btn-ctrl-primary" id="btnQuerySdCard">
+                  <span class="btn-icon">🔍</span> Query SD Card (0x9205)
+                </button>
+                <button class="btn-ctrl btn-ctrl-outline" id="btnRefreshRecordings">
+                  <span class="btn-icon">↻</span> Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- Visual Recording Timeline Scrubber -->
+            <div class="vc-timeline-card">
+              <div class="timeline-header-bar">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span style="font-size:12px;font-weight:700;color:var(--text-primary);">Footage Timeline</span>
+                  <div class="timeline-legend">
+                    <span class="legend-item"><span class="legend-dot green"></span> Recorded Intervals</span>
+                    <span class="legend-item"><span class="legend-dot red"></span> Safety Incidents</span>
+                    <span class="legend-item"><span class="legend-dot blue"></span> Selected Scrubber Position</span>
+                  </div>
+                </div>
+                <div class="timeline-timestamp-chip" id="vcScrubTimestampChip">
+                  Selected Time: <strong id="vcScrubTimestampText">12:00:00 IST</strong>
+                </div>
+              </div>
+
+              <!-- Interactive Timeline Canvas / Rail -->
+              <div class="timeline-rail-wrapper" id="vcTimelineWrapper">
+                <div class="timeline-hours-axis">
+                  <span>00:00</span><span>02:00</span><span>04:00</span><span>06:00</span>
+                  <span>08:00</span><span>10:00</span><span>12:00</span><span>14:00</span>
+                  <span>16:00</span><span>18:00</span><span>20:00</span><span>22:00</span><span>24:00</span>
+                </div>
+                <div class="timeline-track" id="vcTimelineTrack">
+                  <!-- Injected intervals & markers via JS -->
+                  <div class="timeline-scrubber-needle" id="vcTimelineNeedle" style="left:50%;">
+                    <div class="needle-flag" id="vcNeedleFlag">12:00</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lower Split: Video Player + Retrieval Engine & Metadata -->
+            <div class="vc-lower-split">
+
+              <!-- Left: Video Player Deck -->
+              <div class="vc-player-deck">
+                <div class="card-header-bar" style="padding:10px 14px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="badge-chip online" id="vcVideoStatusChip">● Available</span>
+                    <span style="font-size:12px;font-weight:700;color:var(--text-primary);" id="vcPlayerTitle">CH1 Road Facing Footage</span>
+                    <span style="font-size:11px;color:var(--text-muted);" id="vcPlayerSubtitle">1080P FHD • H.264 / AAC</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnVcDownloadClip" title="Download Footage MP4">⬇️ Download Clip</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnVcFullscreen" title="Fullscreen Playback">⛶</button>
+                  </div>
+                </div>
+
+                <div class="vc-video-viewport">
+                  <video id="vcVideoPlayer" controls playsinline style="width:100%;height:100%;background:#000;border-radius:0 0 6px 6px;"></video>
+                  <div class="vc-video-overlay-info" id="vcPlayerOverlayInfo">
+                    <span id="vcOsdChannel">CAM1 ROAD</span> • <span id="vcOsdTime">--:--:--</span> • <span id="vcOsdSpeed">SPEED: -- KM/H</span>
+                  </div>
+                </div>
+
+                <!-- Custom Playback Controls -->
+                <div class="vc-player-controls-bar">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnVcPlayPause">⏯️ Play</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnVcSeekBack">-10s</button>
+                    <button class="btn-ctrl btn-ctrl-outline" id="btnVcSeekForward">+10s</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span style="font-size:11px;color:var(--text-secondary);font-weight:600;">Speed:</span>
+                      <select id="vcPlaybackSpeedSelect" class="vc-select-input" style="width:70px;height:28px;padding:0 6px;">
+                        <option value="0.5">0.5x</option>
+                        <option value="1.0" selected>1.0x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2.0">2.0x</option>
+                      </select>
+                    </div>
+                    <button class="btn-ctrl btn-ctrl-primary" id="btnRequestRetrieval" style="height:28px;">
+                      🚀 Request Cloud Retrieval (0x9206)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Footage Metadata & Retrieval Job Status -->
+              <div class="vc-sidebar-deck">
+
+                <!-- Metadata Card -->
+                <div class="deck-panel-card" style="margin-bottom:12px;">
+                  <div class="card-header-bar" style="padding:10px 14px;">
+                    <h3 class="card-title">Clip Metadata & Telematics</h3>
+                  </div>
+                  <div class="vc-metadata-grid">
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Selected Vehicle</span>
+                      <span class="vc-meta-val" id="vcMetaPlate">MP-09-WW-4359</span>
+                    </div>
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Assigned Driver</span>
+                      <span class="vc-meta-val" id="vcMetaDriver">Sanket Jain</span>
+                    </div>
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Camera Lens</span>
+                      <span class="vc-meta-val" id="vcMetaChannel">CH1 Road (1080P)</span>
+                    </div>
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Video Codec</span>
+                      <span class="vc-meta-val" id="vcMetaCodec">H.264 / AAC</span>
+                    </div>
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Storage Location</span>
+                      <span class="vc-meta-val" id="vcMetaLocation">Micro-SD Card (Hardware)</span>
+                    </div>
+                    <div class="vc-meta-item">
+                      <span class="vc-meta-label">Cloud Retention</span>
+                      <span class="vc-meta-val">7 Days (₹500 Tier)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- On-Demand SD Retrieval Job Progress -->
+                <div class="deck-panel-card" id="vcRetrievalJobCard">
+                  <div class="card-header-bar" style="padding:10px 14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <h3 class="card-title">SD Retrieval Job</h3>
+                      <span class="badge-chip" id="vcJobStatusBadge" style="background:#e0f2fe;color:#0369a1;">IDLE</span>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-muted);" id="vcJobIdLabel">No active job</span>
+                  </div>
+                  <div style="padding:14px;">
+                    <div class="vc-progress-track">
+                      <div class="vc-progress-fill" id="vcJobProgressBar" style="width:0%;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;">
+                      <span id="vcJobStageText" style="color:var(--text-secondary);font-weight:600;">Ready to retrieve footage</span>
+                      <span id="vcJobPercentText" style="color:var(--color-primary);font-weight:700;">0%</span>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:8px;" id="vcJobHelpText">
+                      Click "Request Cloud Retrieval" to pull encrypted video directly from the vehicle's micro-SD card over JT/T 808 port 10780.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Bottom: Available Recordings Roster -->
+            <div class="deck-panel-card" style="margin-top:14px;">
+              <div class="card-header-bar">
+                <div class="card-title-group">
+                  <h3 class="card-title">Footage Archive & Retrieved Clips</h3>
+                  <span class="card-subtitle">Local storage and cloud recordings library</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button class="filter-pill active" data-vc-tab="all" id="btnVcTabAll">All Footage</button>
+                  <button class="filter-pill" data-vc-tab="cloud" id="btnVcTabCloud">Cloud Ready</button>
+                  <button class="filter-pill" data-vc-tab="sd" id="btnVcTabSd">SD Card Query Results</button>
+                </div>
+              </div>
+              <div class="enterprise-table-wrap">
+                <table class="enterprise-table">
+                  <thead>
+                    <tr>
+                      <th>Time Window</th>
+                      <th>Channel</th>
+                      <th>Duration</th>
+                      <th>Storage Source</th>
+                      <th>Resolution</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vcRecordingsTableBody">
+                    <!-- Populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 4: SAFETY INBOX ══════════════════════════════ -->
+        <div class="view-container" id="viewSafety">
+          <div class="safety-inbox-layout">
+
+            <!-- Safety KPI Cards -->
+            <div class="stat-cards-grid" style="grid-template-columns:repeat(4, 1fr);margin-bottom:14px;">
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Total Safety Incidents</span>
+                  <div class="stat-icon-pill" style="background:#f1f5f9;color:#475569;">🚨</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-value" id="kpiTotalIncidents">8</span>
+                </div>
+                <div class="stat-trend neutral"><span>Live fleet telemetry</span></div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Needs Review / Triage</span>
+                  <div class="stat-icon-pill" style="background:#fef3c7;color:#b45309;">⚠️</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-value" id="kpiNeedsReview">7</span>
+                </div>
+                <div class="stat-trend negative"><span>Pending coaching action</span></div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Critical Severity</span>
+                  <div class="stat-icon-pill" style="background:#fee2e2;color:#b91c1c;">💥</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-value" id="kpiCriticalCount">5</span>
+                </div>
+                <div class="stat-trend negative"><span>Collision & Harsh Brakes</span></div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Coached / Resolved</span>
+                  <div class="stat-icon-pill" style="background:#dcfce7;color:#15803d;">✅</div>
+                </div>
+                <div class="stat-main">
+                  <span class="stat-value" id="kpiCoachedCount">1</span>
+                </div>
+                <div class="stat-trend positive"><span>Coaching completed</span></div>
+              </div>
+            </div>
+
+            <!-- Safety Filter Bar -->
+            <div class="vc-top-filter-bar" style="margin-bottom:14px;">
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Severity</label>
+                <select id="safetyFilterSeverity" class="vc-select-input">
+                  <option value="ALL">All Severities</option>
+                  <option value="CRITICAL">💥 Critical</option>
+                  <option value="MAJOR">⚠️ Major</option>
+                  <option value="MINOR">ℹ️ Minor</option>
+                </select>
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Event Classification</label>
+                <select id="safetyFilterType" class="vc-select-input">
+                  <option value="ALL">All Hardware Events</option>
+                  <option value="COLLISION">💥 Collision Alarm</option>
+                  <option value="HARSH_BRAKE">🛑 Harsh Braking</option>
+                  <option value="HARSH_ACCEL">⚡ Harsh Acceleration</option>
+                  <option value="OVERSPEED">🏎️ Overspeed Alert</option>
+                  <option value="SOS">🆘 Emergency SOS</option>
+                  <option value="OFFLINE">📵 Device Offline</option>
+                </select>
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Triage Status</label>
+                <select id="safetyFilterStatus" class="vc-select-input">
+                  <option value="ALL">All Statuses</option>
+                  <option value="NEEDS_REVIEW" selected>⚠️ Needs Review</option>
+                  <option value="COACHED">✅ Coached</option>
+                  <option value="DISMISSED">❌ Dismissed</option>
+                </select>
+              </div>
+
+              <div class="vc-filter-group">
+                <label class="vc-field-label">Vehicle</label>
+                <select id="safetyFilterVehicle" class="vc-select-input">
+                  <option value="ALL">All Vehicles</option>
+                  <option value="860871080043592">MP-09-WW-4359</option>
+                  <option value="872312858278">VEH-8278</option>
+                  <option value="ACC_TEST_TERM_24">ACC_TEST_TERM_24</option>
+                </select>
+              </div>
+
+              <div class="vc-action-group">
+                <button class="btn-ctrl btn-ctrl-outline" id="btnResetSafetyFilters">Reset Filters</button>
+              </div>
+            </div>
+
+            <!-- Incidents Table Card -->
+            <div class="deck-panel-card">
+              <div class="card-header-bar">
+                <div class="card-title-group">
+                  <h3 class="card-title">Driver Safety Coaching Inbox</h3>
+                  <span class="card-subtitle">Real hardware telemetry alarms & collision detections</span>
+                </div>
+                <span class="badge-chip" id="safetyInboxBadge" style="background:#fee2e2;color:#b91c1c;">8 Incidents</span>
+              </div>
+              <div class="enterprise-table-wrap">
+                <table class="enterprise-table">
+                  <thead>
+                    <tr>
+                      <th>Severity</th>
+                      <th>Incident Type</th>
+                      <th>Time & Date</th>
+                      <th>Vehicle & Plate</th>
+                      <th>Driver</th>
+                      <th>Speed & Impact</th>
+                      <th>Location</th>
+                      <th>Video</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="safetyIncidentsTableBody">
+                    <!-- Populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 5: VEHICLES & DEVICES (Container Prepared) ═══ -->
+        <div class="view-container" id="viewVehicles">
+          <div class="empty-state-box">
+            <div class="empty-icon">🚚</div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);">Vehicles & Hardware Directory</h3>
+            <p style="font-size:12px;max-width:400px;">Asset directory, HSRP Indian license plate pairing, and dashcam terminal diagnostics.</p>
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 6: TRIPS & ROUTES (Container Prepared) ═══════ -->
+        <div class="view-container" id="viewTrips">
+          <div class="empty-state-box">
+            <div class="empty-icon">🗺️</div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);">Trips & Route History Replay</h3>
+            <p style="font-size:12px;max-width:400px;">Route history explorer with animated polyline replay and speeding analysis.</p>
+          </div>
+        </div>
+
+        <!-- ══ SCREEN 7: ADMINISTRATION (Container Prepared) ═══════ -->
+        <div class="view-container" id="viewAdmin">
+          <div class="empty-state-box">
+            <div class="empty-icon">⚙️</div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);">Organization & Subscription Administration</h3>
+            <p style="font-size:12px;max-width:400px;">Multi-tenant organization management, RBAC user permissions, and low-cost ₹500/year storage quota meters.</p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  <!-- ── Incident Review & Coaching Modal ───────────────────────────── -->
+  <div id="incidentReviewModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card-wide">
+      <!-- Modal Header -->
+      <div class="modal-header-bar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="badge-chip" id="modalIncidentSeverityBadge" style="background:#fee2e2;color:#b91c1c;">CRITICAL</span>
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);" id="modalIncidentTitle">COLLISION WARNING REVIEW</h3>
+            <span style="font-size:11px;color:var(--text-muted);" id="modalIncidentSubtitle">ID: ACC-20250219-9632 • 26 Oct 2026, 14:30:00 IST</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btnCloseIncidentModal">&times;</button>
+      </div>
+
+      <!-- Modal Body Split -->
+      <div class="modal-body-split">
+
+        <!-- Left: Synchronized Dual Camera Player -->
+        <div class="modal-player-column">
+          <div class="dual-camera-grid" style="gap:8px;">
+            <!-- Screen 1: Front Road Camera -->
+            <div class="camera-screen-box">
+              <div class="screen-label-badge">
+                <span style="color:#10b981;">●</span>
+                <span>CH1: ROAD FACING</span>
+              </div>
+              <video id="modalVideoRoad" controls playsinline></video>
+              <div class="telemetry-osd-overlay">
+                <div>FRONT CAM • <span id="modalOsdTimeRoad">00:00</span></div>
+                <div id="modalOsdSpeedRoad">SPEED: 55 KM/H</div>
+              </div>
+            </div>
+
+            <!-- Screen 2: Cabin Camera -->
+            <div class="camera-screen-box">
+              <div class="screen-label-badge">
+                <span style="color:#10b981;">●</span>
+                <span>CH2: DRIVER CABIN</span>
+              </div>
+              <video id="modalVideoCabin" controls playsinline></video>
+              <div class="telemetry-osd-overlay">
+                <div>CABIN CAM • <span id="modalOsdTimeCabin">00:00</span></div>
+                <div>DRIVER: SANKET JAIN</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Synchronized Transport Controls -->
+          <div class="sync-transport-bar">
+            <button class="btn-ctrl btn-ctrl-primary" id="btnModalSyncPlay">⏯️ Play Both Synchronized</button>
+            <button class="btn-ctrl btn-ctrl-outline" id="btnModalRewind">-5s</button>
+            <button class="btn-ctrl btn-ctrl-outline" id="btnModalForward">+5s</button>
+            <div style="font-size:11px;color:var(--text-muted);margin-left:auto;">
+              Dual-cam playback synchronized via hardware timestamps
+            </div>
+          </div>
+
+          <!-- Speed Telemetry Curve HUD -->
+          <div class="speed-curve-box">
+            <span style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:6px;">Speed Curve at Incident Impact:</span>
+            <div class="speed-sparkline-row" id="modalSpeedSparkline">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Incident Context & Driver Coaching Form -->
+        <div class="modal-coaching-column">
+
+          <!-- Telematics Details -->
+          <div class="deck-panel-card" style="margin-bottom:12px;">
+            <div class="card-header-bar" style="padding:8px 12px;">
+              <span style="font-size:11px;font-weight:700;color:var(--text-primary);">Incident Context</span>
+            </div>
+            <div class="vc-metadata-grid" style="grid-template-columns:1fr 1fr;padding:10px;">
+              <div class="vc-meta-item">
+                <span class="vc-meta-label">Vehicle Plate</span>
+                <span class="vc-meta-val" id="modalPlateText">MP-09-WW-4359</span>
+              </div>
+              <div class="vc-meta-item">
+                <span class="vc-meta-label">Assigned Driver</span>
+                <span class="vc-meta-val" id="modalDriverText">Sanket Jain</span>
+              </div>
+              <div class="vc-meta-item">
+                <span class="vc-meta-label">Speed at Impact</span>
+                <span class="vc-meta-val" id="modalImpactSpeedText" style="color:var(--color-danger);">55 km/h</span>
+              </div>
+              <div class="vc-meta-item">
+                <span class="vc-meta-label">Coordinates</span>
+                <span class="vc-meta-val" id="modalCoordsText">22.7533°N, 75.8937°E</span>
+              </div>
+              <div class="vc-meta-item" style="grid-column:span 2;">
+                <span class="vc-meta-label">GPS Location</span>
+                <span class="vc-meta-val" id="modalLocationText">Indore City, Juni Indore Tahsil, Madhya Pradesh</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coaching Form -->
+          <div class="deck-panel-card">
+            <div class="card-header-bar" style="padding:8px 12px;">
+              <span style="font-size:11px;font-weight:700;color:var(--text-primary);">Driver Coaching & Triage</span>
+            </div>
+            <div style="padding:12px;">
+              <div style="margin-bottom:10px;">
+                <label class="vc-field-label">Coaching Category</label>
+                <select id="modalCoachingCategory" class="vc-select-input" style="width:100%;">
+                  <option value="TAILGATING">Tailgating / Inadequate Following Distance</option>
+                  <option value="DISTRACTED">Driver Inattention / Mobile Usage</option>
+                  <option value="LATE_BRAKING" selected>Late Braking on Highway</option>
+                  <option value="SPEEDING">Excessive Speed in Traffic</option>
+                  <option value="FALSE_ALARM">False Positive / Road Bumps</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <label class="vc-field-label">Manager Coaching Notes & Behavioral Feedback</label>
+                <textarea id="modalCoachingNotes" class="vc-textarea-input" rows="4" placeholder="Enter coaching feedback discussed with driver during safety debrief..."></textarea>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="btn-ctrl btn-ctrl-primary" id="btnSubmitCoached" style="justify-content:center;height:34px;">
+                  ✅ Mark as Reviewed & Coached
+                </button>
+                <button class="btn-ctrl btn-ctrl-outline" id="btnSubmitDismiss" style="justify-content:center;height:34px;color:var(--color-danger);">
+                  ❌ Dismiss Incident (Non-Safety Event)
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

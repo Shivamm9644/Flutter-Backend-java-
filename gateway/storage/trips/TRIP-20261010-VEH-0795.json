@@ -1,0 +1,101 @@
+{
+  "tripId": "TRIP-20261010-VEH-0795",
+  "vehicleId": "VEH-0795",
+  "terminalId": "872312860795",
+  "startTime": "2026-10-10T06:09:35.000Z",
+  "endTime": null,
+  "startAddress": "20, Vijay Nagar Square, Indore, Madhya Pradesh 452010",
+  "endAddress": null,
+  "metrics": {
+    "totalDistanceKm": 0.00022238985351772452,
+    "drivingTimeSec": 0,
+    "stoppedTimeSec": 98,
+    "maxSpeed": 0
+  },
+  "stops": [],
+  "route": [
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:09:35.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:09:43.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:09:53.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:04.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:14.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:24.000Z"
+    },
+    {
+      "lat": 23.11681,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:34.000Z"
+    },
+    {
+      "lat": 23.116808,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:50.000Z"
+    },
+    {
+      "lat": 23.116808,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:10:53.000Z"
+    },
+    {
+      "lat": 23.116808,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:11:04.000Z"
+    },
+    {
+      "lat": 23.116808,
+      "lng": 114.481233,
+      "speed": 0,
+      "time": "2026-10-10T06:11:13.000Z"
+    }
+  ],
+  "isSimulated": false,
+  "_lastPoint": {
+    "terminalId": "872312860795",
+    "vehicleId": "VEH-0795",
+    "latitude": 23.116808,
+    "longitude": 114.481233,
+    "speed": 0,
+    "heading": 0,
+    "ignition": true,
+    "timestamp": "2026-10-10T06:11:13.000Z",
+    "alarmType": null,
+    "eventType": "NORMAL",
+    "impactGForce": null
+  },
+  "_currentStopStart": "2026-10-10T06:10:04.000Z",
+  "_currentStopDuration": 0,
+  "_zeroSpeedCount": 11
+}

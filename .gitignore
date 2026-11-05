@@ -1,0 +1,46 @@
+# Maven & Java Build Output
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Node.js & Gateway Dependencies
+node_modules/
+gateway/node_modules/
+gateway/storage/media/
+gateway/storage/recordings/
+gateway/storage/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android / Mobile Binaries
+*.apk
+*.aab
+gateway/public/*.apk
+gateway/public/download/*.apk
+
+# IDE and Editor Files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log

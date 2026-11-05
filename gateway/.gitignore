@@ -1,0 +1,12 @@
+node_modules/
+*.env
+*.log
+*.ogv
+*.mp4
+*.db-shm
+*.db-wal
+storage/media/
+storage/accidents/
+mock_data/
+temp_extracted.json
+verification-*.json
