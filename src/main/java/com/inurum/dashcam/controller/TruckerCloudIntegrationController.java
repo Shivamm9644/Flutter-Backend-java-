@@ -74,11 +74,11 @@ public class TruckerCloudIntegrationController {
         CurrentUser user = CurrentUser.from(req);
         return Map.of(
                 "status", "VALID",
-                "accountId", user.userId(),
+                "accountId", user.id(),
                 "email", user.email(),
                 "role", user.role(),
                 "tenantId", user.tenantId() != null ? user.tenantId() : "PLATFORM",
-                "environment", user.userId().contains("sandbox") ? "SANDBOX" : "PRODUCTION",
+                "environment", user.id().contains("sandbox") ? "SANDBOX" : "PRODUCTION",
                 "timestamp", Instant.now().toString()
         );
     }
