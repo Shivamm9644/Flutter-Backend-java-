@@ -68,6 +68,21 @@ public class TruckerCloudIntegrationController {
         this.safetyService = safetyService;
     }
 
+    @GetMapping("/auth/validate")
+    @Operation(summary = "Validate API Key credentials and get integration account context")
+    public Map<String, Object> validateAuth(HttpServletRequest req) {
+        CurrentUser user = CurrentUser.from(req);
+        return Map.of(
+                "status", "VALID",
+                "accountId", user.userId(),
+                "email", user.email(),
+                "role", user.role(),
+                "tenantId", user.tenantId() != null ? user.tenantId() : "PLATFORM",
+                "environment", user.userId().contains("sandbox") ? "SANDBOX" : "PRODUCTION",
+                "timestamp", Instant.now().toString()
+        );
+    }
+
     @GetMapping("/vehicles")
     @Operation(summary = "List vehicles with validated 17-char VIN, paired DashCam, driver and odometer")
     public PagedResponse<TruckerCloudVehicleDto> getVehicles(
