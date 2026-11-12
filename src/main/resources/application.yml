@@ -32,7 +32,8 @@ security:
     secret: ${JWT_SECRET:inurum-dashcam-jwt-production-secret-key-super-secure-256-bit}
     expiration-ms: ${JWT_EXPIRATION_MS:43200000}
   integration:
-    api-key: ${INTEGRATION_API_KEY:inurum-tc-prod-key-2026}
+    api-key: ${INTEGRATION_API_KEY:gbt-tc-prod-key-9f82d14b}
+    sandbox-key: ${INTEGRATION_SANDBOX_KEY:gbt-tc-sandbox-key-7a3e5c12}
 
 # The Node JT808/JT1078 gateway (same server). It owns the camera sockets, live HLS and SD playback.
 gateway:

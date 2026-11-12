@@ -28,6 +28,15 @@ public class GPSPositionEntity {
     @Column(length = 64)
     public String tenantId;
 
+    @Column(length = 64)
+    public String driverId;
+
+    @Column(length = 128)
+    public String driverName;
+
+    @Column(length = 32)
+    public String timezone = "UTC";
+
     /** Timestamp of the GPS fix from the satellite/device clock (UTC) */
     @Column(nullable = false)
     public Instant timestamp;
@@ -55,4 +64,3 @@ public class GPSPositionEntity {
     @Column(nullable = false)
     public Instant recordedAt;
 }
-

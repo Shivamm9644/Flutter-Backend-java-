@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.inurum.dashcam.dto.OdometerDto;
+import com.inurum.dashcam.dto.truckercloud.TruckerCloudSafetyEventDto;
 import com.inurum.dashcam.dto.truckercloud.TruckerCloudTelemetryDto;
 import com.inurum.dashcam.dto.truckercloud.TruckerCloudVehicleDto;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +33,7 @@ public class TruckerCloudContractTest {
                 "T680",
                 2023,
                 "tenant-inurum",
-                "Inurum Logistics",
+                "GBT Logistics",
                 "drv-01",
                 "Rajesh Sharma",
                 "DL-987654321",
@@ -50,7 +51,7 @@ public class TruckerCloudContractTest {
     }
 
     @Test
-    @DisplayName("TruckerCloudTelemetryDto serializes with valid UTC ISO timestamp and metric units")
+    @DisplayName("TruckerCloudTelemetryDto serializes with valid UTC ISO timestamp, driver attribution, and metric speed")
     void testTelemetryContract() throws Exception {
         TruckerCloudTelemetryDto telemetry = new TruckerCloudTelemetryDto(
                 "veh-001",
@@ -59,8 +60,12 @@ public class TruckerCloudContractTest {
                 "867543051234567",
                 "018800123456",
                 Instant.parse("2026-11-02T12:00:00Z"),
+                "UTC",
+                "drv-01",
+                "Rajesh Sharma",
                 33.7490,
                 -84.3880,
+                65.4,
                 65.4,
                 180.0,
                 315.0,
@@ -72,6 +77,46 @@ public class TruckerCloudContractTest {
         assertTrue(json.contains("\"latitude\":33.749"));
         assertTrue(json.contains("\"longitude\":-84.388"));
         assertTrue(json.contains("\"speedKmH\":65.4"));
+        assertTrue(json.contains("\"speed\":65.4"));
+        assertTrue(json.contains("\"driverId\":\"drv-01\""));
+        assertTrue(json.contains("\"driverName\":\"Rajesh Sharma\""));
+        assertTrue(json.contains("\"timezone\":\"UTC\""));
         assertTrue(json.contains("2026-11-02T12:00:00Z"));
+    }
+
+    @Test
+    @DisplayName("TruckerCloudSafetyEventDto serializes with odometer at time of event and video URLs")
+    void testSafetyEventContract() throws Exception {
+        TruckerCloudSafetyEventDto event = new TruckerCloudSafetyEventDto(
+                "evt-1001",
+                "veh-001",
+                "1HD1KAE12FB012345",
+                "KA01AB1234",
+                "867543051234567",
+                "drv-01",
+                "Rajesh Sharma",
+                "HARSH_BRAKE",
+                "HIGH",
+                Instant.parse("2026-11-02T14:30:00Z"),
+                "UTC",
+                1,
+                33.7490,
+                -84.3880,
+                45.2,
+                45.2,
+                OdometerDto.of(142852.1, "ECU"),
+                "READY",
+                "https://api.gbttelematics.com/media/incidents/evt-1001_ch1.m3u8",
+                "https://api.gbttelematics.com/media/incidents/evt-1001_ch2.m3u8",
+                Instant.parse("2026-11-03T14:30:00Z")
+        );
+
+        String json = mapper.writeValueAsString(event);
+        assertTrue(json.contains("\"eventId\":\"evt-1001\""));
+        assertTrue(json.contains("\"odometer\":{\"value\":142852.1,\"unit\":\"km\",\"source\":\"ECU\"}"));
+        assertTrue(json.contains("\"driverId\":\"drv-01\""));
+        assertTrue(json.contains("\"timezone\":\"UTC\""));
+        assertTrue(json.contains("\"speedKmH\":45.2"));
+        assertTrue(json.contains("\"speed\":45.2"));
     }
 }

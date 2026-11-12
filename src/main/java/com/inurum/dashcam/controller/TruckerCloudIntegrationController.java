@@ -180,8 +180,12 @@ public class TruckerCloudIntegrationController {
                     v.imei != null ? v.imei : d.simNo(),
                     d.terminalId(),
                     d.lastOnline() != null ? d.lastOnline() : now,
+                    "UTC",
+                    v.driverId,
+                    v.driverName,
                     d.lat(),
                     d.lng(),
+                    d.speed(),
                     d.speed(),
                     0.0,
                     0.0,
@@ -239,6 +243,11 @@ public class TruckerCloudIntegrationController {
 
         List<TruckerCloudTelemetryDto> dtos = positionPage.getContent().stream().map(p -> {
             VehicleEntity v = p.vehicleId != null ? byId.get(p.vehicleId) : byTerminal.get(p.terminalId);
+            String driverId = p.driverId != null ? p.driverId : (v != null ? v.driverId : null);
+            String driverName = p.driverName != null ? p.driverName : (v != null ? v.driverName : null);
+            String tz = p.timezone != null ? p.timezone : "UTC";
+            double spd = p.speed;
+
             return new TruckerCloudTelemetryDto(
                     p.vehicleId != null ? p.vehicleId : (v != null ? v.id : null),
                     v != null ? v.vin : null,
@@ -246,9 +255,13 @@ public class TruckerCloudIntegrationController {
                     v != null && v.imei != null ? v.imei : null,
                     p.terminalId,
                     p.timestamp,
+                    tz,
+                    driverId,
+                    driverName,
                     p.lat,
                     p.lng,
-                    p.speed,
+                    spd,
+                    spd,
                     p.heading,
                     p.altitude,
                     p.ignition,
@@ -418,9 +431,11 @@ public class TruckerCloudIntegrationController {
                 e.type,
                 e.severity,
                 e.timestamp,
+                "UTC",
                 e.channel,
                 e.lat,
                 e.lng,
+                e.speed,
                 e.speed,
                 OdometerDto.of(odoVal, odoSource),
                 e.mediaStatus != null ? e.mediaStatus : "STORED_ON_SD",

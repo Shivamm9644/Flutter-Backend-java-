@@ -205,6 +205,9 @@ public class FleetService {
             pos.terminalId = d.terminalId();
             pos.vehicleId = v != null ? v.id : null;
             pos.tenantId = v != null ? v.tenantId : BootstrapInitializer.PLATFORM_TENANT_ID;
+            pos.driverId = v != null ? v.driverId : null;
+            pos.driverName = v != null ? v.driverName : null;
+            pos.timezone = "UTC";
             pos.timestamp = d.lastOnline() != null ? d.lastOnline() : Instant.now();
             pos.lat = d.lat();
             pos.lng = d.lng();

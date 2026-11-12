@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-@Schema(description = "TruckerCloud safety event record with vehicle, driver and video evidence")
+@Schema(description = "TruckerCloud safety event record with vehicle, driver, odometer and video evidence")
 public record TruckerCloudSafetyEventDto(
         @Schema(description = "Unique event ID", example = "evt-20261102-001")
         String eventId,
@@ -37,6 +37,9 @@ public record TruckerCloudSafetyEventDto(
         @Schema(description = "Timestamp in UTC ISO 8601", example = "2026-11-02T10:15:30Z")
         Instant timestamp,
 
+        @Schema(description = "Timezone of event", example = "UTC")
+        String timezone,
+
         @Schema(description = "Camera channel involved", example = "1")
         Integer channel,
 
@@ -49,7 +52,10 @@ public record TruckerCloudSafetyEventDto(
         @Schema(description = "Speed at time of event in km/h", example = "72.4")
         Double speedKmH,
 
-        @Schema(description = "Odometer at time of event with source")
+        @Schema(description = "Speed at time of event in km/h (alias)", example = "72.4")
+        Double speed,
+
+        @Schema(description = "Odometer at time of event with ECU/GPS source provenance")
         OdometerDto odometer,
 
         @Schema(description = "Media availability state", example = "READY",
@@ -66,4 +72,3 @@ public record TruckerCloudSafetyEventDto(
         Instant mediaExpiresAt
 ) {
 }
-

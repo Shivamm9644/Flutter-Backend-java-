@@ -25,6 +25,15 @@ public record TruckerCloudTelemetryDto(
         @Schema(description = "Timestamp in UTC ISO 8601", example = "2026-11-02T11:45:00Z")
         Instant timestamp,
 
+        @Schema(description = "Timezone of vehicle/fix", example = "UTC")
+        String timezone,
+
+        @Schema(description = "Assigned driver ID at time of ping", example = "drv-4f2a1b9c")
+        String driverId,
+
+        @Schema(description = "Assigned driver name at time of ping", example = "Rajesh Sharma")
+        String driverName,
+
         @Schema(description = "WGS-84 latitude", example = "33.749000")
         double latitude,
 
@@ -33,6 +42,9 @@ public record TruckerCloudTelemetryDto(
 
         @Schema(description = "Speed in km/h", example = "65.4")
         double speedKmH,
+
+        @Schema(description = "Speed in km/h (consistent naming alias)", example = "65.4")
+        double speed,
 
         @Schema(description = "Heading in degrees from true North (0-359)", example = "180.0")
         double heading,
@@ -47,4 +59,3 @@ public record TruckerCloudTelemetryDto(
         OdometerDto odometer
 ) {
 }
-

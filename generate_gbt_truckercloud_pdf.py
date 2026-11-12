@@ -176,14 +176,14 @@ def build_pdf():
     meta_data = [
         [
             Paragraph("<b>Target Audience:</b> TruckerCloud Integration Team", table_cell),
-            Paragraph("<b>Production Base URL:</b> http://3.85.81.10:8080", table_cell)
+            Paragraph("<b>Base URL:</b> https://api.gbttelematics.com (Staging: http://3.85.81.10:8080)", table_cell)
         ],
         [
-            Paragraph("<b>Auth Header:</b> X-API-KEY: gbt-tc-prod-key-2026", table_cell),
-            Paragraph("<b>OpenAPI Docs:</b> http://3.85.81.10:8080/swagger-ui/index.html", table_cell)
+            Paragraph("<b>Auth Header:</b> X-API-KEY: [Secure Key] (Sandbox: gbt-tc-sandbox-key-7a3e5c12)", table_cell),
+            Paragraph("<b>OpenAPI Docs:</b> https://api.gbttelematics.com/swagger-ui/index.html", table_cell)
         ],
         [
-            Paragraph("<b>Compliance:</b> 17-char VIN, ECU Odometer, ISO 8601 UTC", table_cell),
+            Paragraph("<b>Compliance:</b> 17-char VIN, ECU Odometer, UTC Timezone, Metric km/h", table_cell),
             Paragraph("<b>Hardware:</b> WanWay H20P 4G LTE Dual-Cam (Road + Cabin)", table_cell)
         ]
     ]
@@ -219,7 +219,7 @@ def build_pdf():
         [Paragraph("<b>Vehicle Identification</b>", table_cell), Paragraph("Strictly enforced 17-character ISO 3779 VIN with valid letters/digits (excluding I, O, Q).", table_cell)],
         [Paragraph("<b>Odometer Data</b>", table_cell), Paragraph("Always labeled with provenance: <code>ECU</code> (direct vehicle bus) or <code>GPS_ESTIMATED</code>. Units in kilometers.", table_cell)],
         [Paragraph("<b>Time Synchronization</b>", table_cell), Paragraph("All timestamps are formatted in UTC ISO 8601 (e.g., <code>2026-11-04T10:30:00Z</code>).", table_cell)],
-        [Paragraph("<b>Authentication</b>", table_cell), Paragraph("Server-to-server HTTP header: <code>X-API-KEY: gbt-tc-prod-key-2026</code>. Global Swagger/API key supported.", table_cell)],
+        [Paragraph("<b>Authentication</b>", table_cell), Paragraph("Server-to-server HTTP header: <code>X-API-KEY: [Secure Key]</code>. Dedicated Sandbox (<code>gbt-tc-sandbox-key-7a3e5c12</code>) and Production keys provided securely.", table_cell)],
         [Paragraph("<b>Video Streaming</b>", table_cell), Paragraph("HLS format (m3u8 index with MPEG-TS segments) for both Channel 1 (Road) and Channel 2 (Cabin).", table_cell)]
     ]
     std_table = Table(std_data, colWidths=[130, 386])
@@ -413,17 +413,23 @@ def build_pdf():
         ],
         """[
   {
-    "terminalId": "872312858278",
     "vehicleId": "veh-aebf556b",
-    "plateNumber": "TRK-9001",
     "vin": "1HD1KAE12FB099999",
-    "lat": 22.746880,
-    "lng": 75.898868,
+    "licensePlate": "TRK-9001",
+    "imei": "867543051234567",
+    "terminalId": "872312858278",
+    "timestamp": "2026-11-04T06:15:30Z",
+    "timezone": "UTC",
+    "driverId": "drv-f4685a30",
+    "driverName": "Marcus Vance",
+    "latitude": 22.746880,
+    "longitude": 75.898868,
+    "speedKmH": 0.0,
     "speed": 0.0,
-    "heading": 185,
+    "heading": 185.0,
+    "altitudeMeters": 540.0,
     "ignition": true,
-    "odometer": { "value": 145230.8, "unit": "km", "source": "ECU" },
-    "timestamp": "2026-11-04T06:15:30Z"
+    "odometer": { "value": 145230.8, "unit": "km", "source": "ECU" }
   }
 ]"""
     ))
@@ -445,19 +451,23 @@ def build_pdf():
         """{
   "items": [
     {
-      "id": "pos-882193",
-      "terminalId": "872312858278",
       "vehicleId": "veh-aebf556b",
       "vin": "1HD1KAE12FB099999",
+      "licensePlate": "TRK-9001",
+      "imei": "867543051234567",
+      "terminalId": "872312858278",
+      "timestamp": "2026-11-04T06:15:30Z",
+      "timezone": "UTC",
+      "driverId": "drv-f4685a30",
+      "driverName": "Marcus Vance",
       "latitude": 22.746880,
       "longitude": 75.898868,
-      "altitude": 540.0,
+      "speedKmH": 0.0,
       "speed": 0.0,
-      "heading": 185,
+      "heading": 185.0,
+      "altitudeMeters": 540.0,
       "ignition": true,
-      "odometerKm": 145230.8,
-      "odometerSource": "ECU",
-      "timestamp": "2026-11-04T06:15:30Z"
+      "odometer": { "value": 145230.8, "unit": "km", "source": "ECU" }
     }
   ],
   "page": 0, "size": 100, "totalItems": 1, "totalPages": 1, "last": true
@@ -480,22 +490,27 @@ def build_pdf():
         """{
   "items": [
     {
-      "id": "evt-7729104",
-      "type": "HARSH_BRAKE",
-      "severity": "HIGH",
-      "timestamp": "2026-11-04T04:15:22Z",
-      "terminalId": "872312858278",
+      "eventId": "evt-7729104",
       "vehicleId": "veh-aebf556b",
       "vin": "1HD1KAE12FB099999",
+      "licensePlate": "TRK-9001",
+      "imei": "867543051234567",
       "driverId": "drv-f4685a30",
       "driverName": "Marcus Vance",
+      "eventType": "HARSH_BRAKE",
+      "severity": "HIGH",
+      "timestamp": "2026-11-04T04:15:22Z",
+      "timezone": "UTC",
+      "channel": 1,
       "latitude": 22.746880,
       "longitude": 75.898868,
-      "speedKmh": 45.2,
-      "gForce": -0.68,
-      "hasVideo": true,
-      "roadCameraUrl": "http://3.85.81.10:8080/media/incidents/evt-7729104_ch1.m3u8",
-      "cabinCameraUrl": "http://3.85.81.10:8080/media/incidents/evt-7729104_ch2.m3u8"
+      "speedKmH": 45.2,
+      "speed": 45.2,
+      "odometer": { "value": 145230.8, "unit": "km", "source": "ECU" },
+      "mediaStatus": "READY",
+      "roadVideoUrl": "https://api.gbttelematics.com/media/incidents/evt-7729104_ch1.m3u8",
+      "cabinVideoUrl": "https://api.gbttelematics.com/media/incidents/evt-7729104_ch2.m3u8",
+      "mediaExpiresAt": "2026-11-05T04:15:22Z"
     }
   ],
   "page": 0, "size": 50, "totalItems": 1, "totalPages": 1, "last": true
