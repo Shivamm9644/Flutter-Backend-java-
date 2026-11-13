@@ -218,8 +218,10 @@ def build_pdf():
         [Paragraph("Standard", table_header), Paragraph("Implementation Specification", table_header)],
         [Paragraph("<b>Vehicle Identification</b>", table_cell), Paragraph("Strictly enforced 17-character ISO 3779 VIN with valid letters/digits (excluding I, O, Q).", table_cell)],
         [Paragraph("<b>Odometer Data</b>", table_cell), Paragraph("Always labeled with provenance: <code>ECU</code> (direct vehicle bus) or <code>GPS_ESTIMATED</code>. Units in kilometers.", table_cell)],
-        [Paragraph("<b>Time Synchronization</b>", table_cell), Paragraph("All timestamps are formatted in UTC ISO 8601 (e.g., <code>2026-11-04T10:30:00Z</code>).", table_cell)],
-        [Paragraph("<b>Authentication</b>", table_cell), Paragraph("Server-to-server HTTP header: <code>X-API-KEY: [Secure Key]</code>. Dedicated Sandbox (<code>gbt-tc-sandbox-key-7a3e5c12</code>) and Production keys provided securely.", table_cell)],
+        [Paragraph("<b>Time Synchronization</b>", table_cell), Paragraph("All timestamps are formatted in UTC ISO 8601 (e.g., <code>2026-11-04T10:30:00Z</code>). Telemetry includes explicit <code>timezone</code> field.", table_cell)],
+        [Paragraph("<b>Speed Units</b>", table_cell), Paragraph("Strictly kilometers per hour (km/h) across all endpoints, exposed as both <code>speedKmH</code> and <code>speed</code>.", table_cell)],
+        [Paragraph("<b>Authentication & Sandbox</b>", table_cell), Paragraph("Header <code>X-API-KEY</code>. Separate Sandbox (<code>gbt-tc-sandbox-key-7a3e5c12</code>) and Production keys provided securely.", table_cell)],
+        [Paragraph("<b>Data Retention</b>", table_cell), Paragraph("High-resolution GPS telemetry retained for a minimum of 180 days (exceeds 90-day requirement).", table_cell)],
         [Paragraph("<b>Video Streaming</b>", table_cell), Paragraph("HLS format (m3u8 index with MPEG-TS segments) for both Channel 1 (Road) and Channel 2 (Cabin).", table_cell)]
     ]
     std_table = Table(std_data, colWidths=[130, 386])
@@ -316,14 +318,34 @@ def build_pdf():
     story.append(Paragraph("2. Certified TruckerCloud Integration Endpoints", h1_style))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E0"), spaceAfter=8))
 
-    # --- API 1: Vehicle Registry ---
+    # --- API 1: Auth & Environment Validation ---
     story.append(make_endpoint_block(
-        1, "GET", "/api/v1/integrations/truckercloud/vehicles",
+        1, "GET", "/api/v1/integrations/truckercloud/auth/validate",
+        "Authentication & Environment Context Validation",
+        "Validates the integration X-API-KEY and returns the authenticated service account, role, and operational environment context.",
+        "Allows TruckerCloud systems to programmatically verify credential validity and confirm whether connected to SANDBOX or PRODUCTION.",
+        [
+            ("X-API-KEY", "Header", "Required. Integration secret key (Sandbox: <code>gbt-tc-sandbox-key-7a3e5c12</code>)")
+        ],
+        """{
+  "status": "VALID",
+  "accountId": "srv-truckercloud-sandbox",
+  "email": "sandbox@truckercloud.com",
+  "role": "SUPER_ADMIN",
+  "tenantId": "tenant-inurum",
+  "environment": "SANDBOX",
+  "timestamp": "2026-11-13T06:38:45Z"
+}"""
+    ))
+
+    # --- API 2: Vehicle Registry ---
+    story.append(make_endpoint_block(
+        2, "GET", "/api/v1/integrations/truckercloud/vehicles",
         "Fleet Vehicles Master Registry",
         "Returns all active fleet vehicles mapped with validated 17-character VIN, device IMEI, assigned driver ID, and ECU odometer.",
         "TruckerCloud uses this endpoint to synchronize vehicle assets, discover newly installed DashCams, and associate telematics.",
         [
-            ("X-API-KEY", "Header", "Required. Integration secret key (<code>gbt-tc-prod-key-2026</code>)"),
+            ("X-API-KEY", "Header", "Required. Server-to-server key (Sandbox: <code>gbt-tc-sandbox-key-7a3e5c12</code>)"),
             ("page", "Query", "Optional. Zero-based page number (default: 0)"),
             ("size", "Query", "Optional. Number of items per page (default: 50, max: 200)")
         ],
@@ -347,9 +369,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 2: Vehicle by VIN ---
+    # --- API 3: Vehicle by VIN ---
     story.append(make_endpoint_block(
-        2, "GET", "/api/v1/integrations/truckercloud/vehicles/{vin}",
+        3, "GET", "/api/v1/integrations/truckercloud/vehicles/{vin}",
         "Vehicle Lookup by 17-Char VIN",
         "Fetches individual vehicle details using its unique 17-character VIN identifier according to ISO 3779 standard.",
         "Allows TruckerCloud systems to immediately resolve a physical DashCam and current driver assignment from a known chassis VIN.",
@@ -372,9 +394,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 3: Drivers List ---
+    # --- API 4: Drivers List ---
     story.append(make_endpoint_block(
-        3, "GET", "/api/v1/integrations/truckercloud/drivers",
+        4, "GET", "/api/v1/integrations/truckercloud/drivers",
         "Fleet Drivers Directory",
         "Provides a paginated list of all active fleet drivers with CDL license information and current vehicle pairings.",
         "Used by TruckerCloud to attribute driver safety scores, incident investigations, and ELD compliance records to specific drivers.",
@@ -401,9 +423,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 4: Latest Telemetry ---
+    # --- API 5: Latest Telemetry ---
     story.append(make_endpoint_block(
-        4, "GET", "/api/v1/integrations/truckercloud/telemetry/latest",
+        5, "GET", "/api/v1/integrations/truckercloud/telemetry/latest",
         "Latest Live GPS & Telematics Fix",
         "Returns the most recent live location, speed, bearing, ignition status, and ECU odometer for all active fleet vehicles.",
         "Supplies TruckerCloud live dispatch maps with real-time location telemetry received over physical JT/T 808 0x0200 packets.",
@@ -434,9 +456,9 @@ def build_pdf():
 ]"""
     ))
 
-    # --- API 5: Historical Breadcrumbs ---
+    # --- API 6: Historical Breadcrumbs ---
     story.append(make_endpoint_block(
-        5, "GET", "/api/v1/integrations/truckercloud/telemetry/history",
+        6, "GET", "/api/v1/integrations/truckercloud/telemetry/history",
         "Historical GPS Breadcrumbs & Trajectory",
         "Retrieves historical GPS position records supporting vehicle/terminal filtering, start/end UTC dates, and pagination.",
         "Allows TruckerCloud to perform exact historical route playback, geofence ingress/egress audits, and stop verification.",
@@ -474,9 +496,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 6: Safety & Incident Events ---
+    # --- API 7: Safety & Incident Events ---
     story.append(make_endpoint_block(
-        6, "GET", "/api/v1/integrations/truckercloud/safety/events",
+        7, "GET", "/api/v1/integrations/truckercloud/safety/events",
         "ADAS, DMS & G-Sensor Safety Events",
         "Returns camera-generated safety incidents including harsh braking, rapid acceleration, collision, distraction, and fatigue.",
         "Includes vehicle and driver association, exact GPS location at time of event, severity score, and video proof availability.",
@@ -517,9 +539,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 7: Video Proof URLs ---
+    # --- API 8: Video Proof URLs ---
     story.append(make_endpoint_block(
-        7, "GET", "/api/v1/safety/recording-url",
+        8, "GET", "/api/v1/safety/recording-url",
         "Incident Video Proof Playback URLs",
         "Generates secure, documented HLS streaming links for road and cabin camera channels linked to a specific safety event ID.",
         "Allows TruckerCloud portal users to review high-definition dual-camera video evidence with signed link expiration safeguards.",
@@ -539,9 +561,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 8: Fleet Trips ---
+    # --- API 9: Fleet Trips ---
     story.append(make_endpoint_block(
-        8, "GET", "/api/v1/integrations/truckercloud/trips",
+        9, "GET", "/api/v1/integrations/truckercloud/trips",
         "Fleet Trips & Mileage Records",
         "Retrieves summarized vehicle trips with departure/arrival timestamps, start/end coordinates, duration, and distance traveled.",
         "Supplies operational data required by TruckerCloud for fuel consumption estimation, route compliance, and IFTA tax audits.",
@@ -573,9 +595,9 @@ def build_pdf():
 }"""
     ))
 
-    # --- API 9: SD Card Video Query ---
+    # --- API 10: SD Card Video Query ---
     story.append(make_endpoint_block(
-        9, "POST", "/api/v1/video/sd/query",
+        10, "POST", "/api/v1/video/sd/query",
         "Remote MicroSD Card Video Query (JT/T 808 0x9205)",
         "Dispatches an over-the-air JT/T 808 0x9205 instruction to the DashCam to inspect recorded video clips stored on its MicroSD card.",
         "Enables TruckerCloud to discover all available continuous recording blocks without transferring heavy video data to cloud storage.",
