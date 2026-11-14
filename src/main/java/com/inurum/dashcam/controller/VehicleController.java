@@ -154,6 +154,96 @@ public class VehicleController {
         return obj("vehicle", fleet.viewOne(v), "message", "Dashcam unpaired.");
     }
 
+    @PostMapping("/{id}/assign-driver")
+    @Operation(summary = "Assign or change driver for this vehicle (supports driverId or manual driverName)")
+    public Map<String, Object> assignDriver(HttpServletRequest req, @PathVariable String id, @RequestBody Map<String, Object> body) {
+        CurrentUser user = CurrentUser.from(req);
+        user.requireRole(Roles.SUPER_ADMIN, Roles.ADMIN);
+        VehicleEntity v = access.requireVehicle(user, id);
+
+        String driverId = Body.str(body, "driverId");
+        if (driverId != null && !driverId.isBlank()) {
+            DriverEntity d = driverRepository.findById(driverId).orElse(null);
+            if (d == null || (!user.isSuperAdmin() && !d.tenantId.equals(user.tenantId()))) {
+                throw ApiException.notFound("DRIVER_NOT_FOUND", "Driver not found: " + driverId);
+            }
+
+            // Unassign driver from previously assigned vehicle if different
+            if (d.assignedVehicleId != null && !d.assignedVehicleId.equals(v.id)) {
+                vehicles.findById(d.assignedVehicleId).ifPresent(oldV -> {
+                    oldV.driverId = null;
+                    oldV.driverName = null;
+                    oldV.driverPhone = null;
+                    oldV.driverLicense = null;
+                    oldV.updatedAt = Instant.now();
+                    vehicles.save(oldV);
+                });
+            }
+
+            // If this vehicle previously had a different driver, unassign that driver
+            if (v.driverId != null && !v.driverId.equals(d.id)) {
+                driverRepository.findById(v.driverId).ifPresent(oldD -> {
+                    oldD.assignedVehicleId = null;
+                    oldD.updatedAt = Instant.now();
+                    driverRepository.save(oldD);
+                });
+            }
+
+            v.driverId = d.id;
+            v.driverName = d.name;
+            v.driverPhone = d.phone;
+            v.driverLicense = d.licenseNumber;
+            v.updatedAt = Instant.now();
+            vehicles.save(v);
+
+            d.assignedVehicleId = v.id;
+            d.updatedAt = Instant.now();
+            driverRepository.save(d);
+
+            audit.record(user.id(), v.tenantId, "ASSIGN_DRIVER", v.id, Map.of("driverId", d.id, "driverName", d.name));
+            return obj("vehicle", fleet.viewOne(v), "message", "Driver " + d.name + " assigned to vehicle " + v.plateNumber + ".");
+        } else if (body.containsKey("driverName")) {
+            v.driverId = null;
+            v.driverName = Body.str(body, "driverName");
+            if (body.containsKey("driverPhone")) v.driverPhone = Body.str(body, "driverPhone");
+            if (body.containsKey("driverLicense")) v.driverLicense = Body.str(body, "driverLicense");
+            v.updatedAt = Instant.now();
+            vehicles.save(v);
+
+            audit.record(user.id(), v.tenantId, "SET_MANUAL_DRIVER", v.id, Map.of("driverName", v.driverName != null ? v.driverName : ""));
+            return obj("vehicle", fleet.viewOne(v), "message", "Driver updated for vehicle " + v.plateNumber + ".");
+        } else {
+            throw ApiException.badRequest("MISSING_DRIVER", "driverId or driverName is required.");
+        }
+    }
+
+    @PostMapping("/{id}/unassign-driver")
+    @Operation(summary = "Unassign current driver from this vehicle")
+    public Map<String, Object> unassignDriver(HttpServletRequest req, @PathVariable String id) {
+        CurrentUser user = CurrentUser.from(req);
+        user.requireRole(Roles.SUPER_ADMIN, Roles.ADMIN);
+        VehicleEntity v = access.requireVehicle(user, id);
+
+        String oldDriverId = v.driverId;
+        if (oldDriverId != null) {
+            driverRepository.findById(oldDriverId).ifPresent(d -> {
+                d.assignedVehicleId = null;
+                d.updatedAt = Instant.now();
+                driverRepository.save(d);
+            });
+        }
+
+        v.driverId = null;
+        v.driverName = null;
+        v.driverPhone = null;
+        v.driverLicense = null;
+        v.updatedAt = Instant.now();
+        vehicles.save(v);
+
+        audit.record(user.id(), v.tenantId, "UNASSIGN_DRIVER", v.id, Map.of("previousDriverId", oldDriverId != null ? oldDriverId : ""));
+        return obj("vehicle", fleet.viewOne(v), "message", "Driver unassigned from vehicle " + v.plateNumber + ".");
+    }
+
     private void applyFields(VehicleEntity v, Map<String, Object> body, CurrentUser user) {
         String plate = Body.str(body, "plateNumber");
         if (plate != null) v.plateNumber = plate.toUpperCase().trim();
