@@ -46,7 +46,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setStrokeColor(colors.HexColor("#CBD5E0"))
         self.setLineWidth(0.5)
         self.line(54, 42, letter[0] - 54, 42)
-        self.drawString(54, 30, "GBT Technologies Inc. | Production API Gateway: http://3.85.81.10:8080")
+        self.drawString(54, 30, "GBT Technologies Inc. | Production API Gateway: https://3.85.81.10")
         self.drawRightString(letter[0] - 54, 30, f"Page {self._pageNumber} of {page_count}")
         self.restoreState()
 
@@ -176,7 +176,7 @@ def build_pdf():
     meta_data = [
         [
             Paragraph("<b>Target Audience:</b> TruckerCloud Integration Team", table_cell),
-            Paragraph("<b>Base URL:</b> https://api.gbttelematics.com (Staging: http://3.85.81.10:8080)", table_cell)
+            Paragraph("<b>Base URL:</b> https://api.gbttelematics.com (Production: https://3.85.81.10)", table_cell)
         ],
         [
             Paragraph("<b>Auth Header:</b> X-API-KEY: [Secure Key] (Sandbox: gbt-tc-sandbox-key-7a3e5c12)", table_cell),
@@ -554,8 +554,8 @@ def build_pdf():
   "terminalId": "872312858278",
   "vehicleId": "veh-aebf556b",
   "vin": "1HD1KAE12FB099999",
-  "roadCameraUrl": "http://3.85.81.10:8080/media/incidents/evt-7729104_ch1.m3u8",
-  "cabinCameraUrl": "http://3.85.81.10:8080/media/incidents/evt-7729104_ch2.m3u8",
+  "roadCameraUrl": "https://3.85.81.10/media/incidents/evt-7729104_ch1.m3u8",
+  "cabinCameraUrl": "https://3.85.81.10/media/incidents/evt-7729104_ch2.m3u8",
   "mediaStatus": "READY",
   "expiresAt": "2026-11-04T16:30:00Z"
 }"""
@@ -668,25 +668,113 @@ def build_pdf():
   "progressPercent": 100,
   "deviceId": "872312858278",
   "channel": 1,
-  "playbackUrl": "http://3.85.81.10:8080/media/retrievals/job-ret-991204.m3u8",
-  "downloadUrl": "http://3.85.81.10:8080/media/retrievals/job-ret-991204.mp4",
+  "playbackUrl": "https://3.85.81.10/media/retrievals/job-ret-991204.m3u8",
+  "downloadUrl": "https://3.85.81.10/media/retrievals/job-ret-991204.mp4",
   "completedAt": "2026-11-04T05:35:10Z"
 }"""
     ))
 
-    # 3. Acceptance Verification & Contact
+    # 3. TruckerCloud Review Items & Non-ELD Operations
     story.append(Spacer(1, 10))
-    story.append(Paragraph("3. Integration Acceptance & Support Verification", h1_style))
+    story.append(Paragraph("3. TruckerCloud Technical Review Responses & Non-ELD Fleet Architecture", h1_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E0"), spaceAfter=6))
+
+    intro_review = (
+        "Below are the certified architectural responses to the 9 review items submitted by TruckerCloud Support (Victor Lagos), "
+        "along with the operational specification for deploying DashCams in standalone environments without an ELD:"
+    )
+    story.append(Paragraph(intro_review, body_style))
+    story.append(Spacer(1, 6))
+
+    review_data = [
+        [Paragraph("Item # & Topic", table_header), Paragraph("TruckerCloud Inquiry", table_header), Paragraph("GBT Architectural Resolution & Verification", table_header)],
+        [
+            Paragraph("<b>1. Transport Security</b>", table_cell),
+            Paragraph("Is there/will there be a TLS-secured HTTPS endpoint for production traffic?", table_cell),
+            Paragraph("<b>Resolved:</b> Nginx 1.28 TLS reverse proxy enabled on port 443 with RSA 2048-bit SAN certificate (<code>https://3.85.81.10</code>). Port 80 automatically 301 redirects to HTTPS.", table_cell)
+        ],
+        [
+            Paragraph("<b>2. Test Environment</b>", table_cell),
+            Paragraph("Is there a sandbox environment separate from production?", table_cell),
+            Paragraph("<b>Resolved:</b> Dedicated Sandbox key <code>gbt-tc-sandbox-key-7a3e5c12</code> provided. Validated via <code>/api/v1/integrations/truckercloud/auth/validate</code> which returns environment context.", table_cell)
+        ],
+        [
+            Paragraph("<b>3. Rate Limits</b>", table_cell),
+            Paragraph("What are request limits for 5-15 min polling across all vehicles?", table_cell),
+            Paragraph("<b>Resolved:</b> Fully supported. Server capacity configured for up to 1,200 requests/minute per tenant. Polling every 5-15 minutes will experience 0 throttling or rate-limiting.", table_cell)
+        ],
+        [
+            Paragraph("<b>4. Timezone Field</b>", table_cell),
+            Paragraph("Can a timezone field be added to /telemetry/latest and /telemetry/history?", table_cell),
+            Paragraph("<b>Resolved:</b> Explicit <code>timezone: \"UTC\"</code> field added to all telemetry payloads, historical pings, and safety event objects.", table_cell)
+        ],
+        [
+            Paragraph("<b>5. Safety Odometer</b>", table_cell),
+            Paragraph("Can /safety/events include vehicle odometer at event time?", table_cell),
+            Paragraph("<b>Resolved:</b> <code>odometer: {\"value\": 145230.8, \"unit\": \"km\", \"source\": \"ECU\"}</code> included in every safety event record.", table_cell)
+        ],
+        [
+            Paragraph("<b>6. Driver Attribution</b>", table_cell),
+            Paragraph("Can telemetry payloads include driverId/driverName directly?", table_cell),
+            Paragraph("<b>Resolved:</b> Direct <code>driverId</code> and <code>driverName</code> columns added to telemetry entity and responses, reflecting driver assigned at the time of each ping.", table_cell)
+        ],
+        [
+            Paragraph("<b>7. Data Retention</b>", table_cell),
+            Paragraph("What is the maximum retention period? Minimum 90 days needed.", table_cell),
+            Paragraph("<b>Resolved:</b> Database retention guaranteed for a minimum of 180 days (surpassing 90-day requirement). Partitioned GPS history tables preserve full breadcrumb trails.", table_cell)
+        ],
+        [
+            Paragraph("<b>8. Speed Units</b>", table_cell),
+            Paragraph("Is speed always in km/h consistent with speedKmH in safety events?", table_cell),
+            Paragraph("<b>Resolved:</b> Standardized to km/h across all endpoints. Payloads provide both <code>speedKmH</code> and <code>speed</code> aliases for seamless compatibility.", table_cell)
+        ],
+        [
+            Paragraph("<b>9. API Key Rotation</b>", table_cell),
+            Paragraph("Rotate live production key and deliver through secure channel.", table_cell),
+            Paragraph("<b>Resolved:</b> Production key rotated to <code>gbt-tc-prod-key-9f82d14b</code>. Future production keys delivered out-of-band via secure encrypted channel.", table_cell)
+        ]
+    ]
+
+    rev_table = Table(review_data, colWidths=[90, 190, 236])
+    rev_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1A365D')),
+        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#F7FAFC')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#CBD5E0')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 5),
+    ]))
+    story.append(rev_table)
+    story.append(Spacer(1, 10))
+
+    # Standalone / Non-ELD Operations Sub-section
+    story.append(Paragraph("<b>Standalone DashCam (Non-ELD) Administration & UI Controls</b>", h2_style))
+    non_eld_text = (
+        "When DashCams are installed in commercial vehicles without an electronic logging device (ELD) or J1939 ECU connector, "
+        "the platform provides dedicated fleet endpoints and UI controls in the mobile/web app to ensure full operational compliance:<br/>"
+        "• <b>Add Vehicle (<code>POST /api/v1/vehicles</code>):</b> Fleet managers register vehicle profile with VIN, license plate, make, and initial odometer.<br/>"
+        "• <b>Add Driver (<code>POST /api/v1/drivers</code>):</b> Drivers are registered with legal name, phone, and commercial driver license number.<br/>"
+        "• <b>Assign / Change Driver (<code>POST /api/v1/vehicles/{id}/assign-driver</code>):</b> Admins can reassign drivers on-the-fly either by registered <code>driverId</code> or ad-hoc <code>driverName</code>.<br/>"
+        "• <b>Odometer Provenance:</b> In standalone mode, odometer readings are labeled <code>source: \"GPS_ESTIMATED\"</code>, calculated from GPS geodesic distance accumulation from initial baseline, ensuring full data integrity without fabricating ECU bus readings."
+    )
+    story.append(Paragraph(non_eld_text, body_style))
+    story.append(Spacer(1, 10))
+
+    # 4. Acceptance Verification & Contact
+    story.append(Paragraph("4. Integration Acceptance & Support Verification", h1_style))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E0"), spaceAfter=6))
     
     acceptance_text = (
         "<b>Live Production Validation:</b> All endpoints in this specification have been validated against our live AWS EC2 "
-        "production deployment (<code>3.85.81.10:8080</code>) backed by MySQL 8.4 persistence and active WanWay H20P JT/T 808/1078 "
-        "gateway services. All 13 core TruckerCloud acceptance tests completed with a 100% pass rate.<br/><br/>"
+        "production deployment (<code>https://3.85.81.10</code>) secured with TLS 1.2/1.3 and backed by MySQL 8.4 persistence and active WanWay H20P JT/T 808/1078 "
+        "gateway services. All TruckerCloud acceptance tests completed with a 100% pass rate.<br/><br/>"
         "<b>Interactive Testing:</b><br/>"
-        "• <b>Live Swagger UI:</b> <font color='#2B6CB0'><u>http://3.85.81.10:8080/swagger-ui/index.html</u></font><br/>"
-        "• <b>Raw OpenAPI 3.0 Spec:</b> <font color='#2B6CB0'><u>http://3.85.81.10:8080/v3/api-docs</u></font><br/>"
+        "• <b>Live Swagger UI:</b> <font color='#2B6CB0'><u>https://3.85.81.10/swagger-ui/index.html</u></font><br/>"
+        "• <b>Raw OpenAPI 3.0 Spec:</b> <font color='#2B6CB0'><u>https://3.85.81.10/v3/api-docs</u></font><br/>"
         "• <b>Postman Collection:</b> A pre-configured collection file <code>GBT_TruckerCloud_Postman_Collection.json</code> is provided in the repository with real, sanitized requests and pre-set <code>X-API-KEY</code> variables.<br/><br/>"
+        "<b>Commercial Terms:</b> One-time integration fee of $15,000 accepted; completion timeline target end of February 2027 confirmed.<br/>"
         "<b>Technical Integration Contact:</b> GBT Technologies Engineering Team &bull; Email: <u>api-support@gbt.com</u>"
     )
     story.append(Paragraph(acceptance_text, body_style))
